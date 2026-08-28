@@ -1,109 +1,23 @@
-import { Router, type Request, type Response } from "express";
-import { supabase } from "../config/supabase.js";
-import { requireAuth, requireAdmin } from "../middleware/authMiddleware.js";
-
-const router = Router();
-router.use(requireAuth, requireAdmin);
-
-router.get("/overview", async (_req, res) => {
-  try {
-    const [{ count: users }, { count: active }, { count: pendingPayments }, { count: pendingWithdrawals }, { data: platform }] = await Promise.all([
-      supabase.from("users").select("id", { count: "exact", head: true }),
-      supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "active"),
-      supabase.from("payments").select("id", { count: "exact", head: true }).eq("status", "pending"),
-      supabase.from("withdrawals").select("id", { count: "exact", head: true }).eq("status", "pending"),
-      supabase.from("platform_wallet").select("balance").eq("id", 1).maybeSingle(),
-    ]);
-    return res.json({ success: true, stats: { users: users ?? 0, activeUsers: active ?? 0, pendingPayments: pendingPayments ?? 0, pendingWithdrawals: pendingWithdrawals ?? 0, platformBalance: platform?.balance ?? 0 } });
-  } catch (e) { console.error(e); return res.status(500).json({ success: false, message: "Unable to load admin overview" }); }
-});
-
-router.get("/users", async (req, res) => {
-  const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200);
-  const search = String(req.query.search || "").trim();
-  let query = supabase.from("users").select("id,email,username,role,status,referral_code,referred_by,created_at,updated_at").order("created_at", { ascending: false }).limit(limit);
-  if (search) query = query.or(`email.ilike.%${search}%,username.ilike.%${search}%`);
-  const { data, error } = await query;
-  if (error) return res.status(500).json({ success: false, message: "Unable to load users" });
-  return res.json({ success: true, users: data ?? [] });
-});
-
-router.patch("/users/:id/status", async (req, res) => {
-  const status = String(req.body?.status || "");
-  if (!['pending','active','suspended','banned'].includes(status)) return res.status(400).json({ success: false, message: "Invalid status" });
-  const { data, error } = await supabase.from("users").update({ status, updated_at: new Date().toISOString() }).eq("id", req.params.id).select("id,status").maybeSingle();
-  if (error || !data) return res.status(400).json({ success: false, message: "Unable to update user" });
-  await supabase.from("audit_logs").insert({ admin_id: req.user!.id, action: "user_status_change", entity_type: "user", entity_id: req.params.id, metadata: { status } });
-  return res.json({ success: true, user: data });
-});
-
-router.get("/payments", async (_req, res) => {
-  const { data, error } = await supabase.from("payments").select("id,user_id,reference,amount_ghs,currency,purpose,status,provider_reference,created_at,paid_at,users(username,email)").order("created_at", { ascending: false }).limit(200);
-  if (error) return res.status(500).json({ success: false, message: "Unable to load payments" });
-  return res.json({ success: true, payments: data ?? [] });
-});
-
-router.get("/withdrawals", async (_req, res) => {
-  const { data, error } = await supabase.from("withdrawals").select("id,user_id,amount,method,account_details,status,admin_note,created_at,processed_at,users(username,email)").order("created_at", { ascending: false }).limit(200);
-  if (error) return res.status(500).json({ success: false, message: "Unable to load withdrawals" });
-  return res.json({ success: true, withdrawals: data ?? [] });
-});
-
-router.patch("/withdrawals/:id", async (req, res) => {
-  const status = String(req.body?.status || "");
-  const note = String(req.body?.note || "").slice(0, 1000);
-  if (!['approved','rejected','paid'].includes(status)) return res.status(400).json({ success: false, message: "Invalid withdrawal status" });
-  const { data: current, error: readError } = await supabase.from("withdrawals").select("id,status,user_id,amount").eq("id", req.params.id).maybeSingle();
-  if (readError || !current) return res.status(404).json({ success: false, message: "Withdrawal not found" });
-  if (current.status === 'paid' || current.status === 'rejected') return res.status(409).json({ success: false, message: "Withdrawal is already finalized" });
-  const { data, error } = await supabase.from("withdrawals").update({ status, admin_note: note || null, processed_at: ['paid','rejected'].includes(status) ? new Date().toISOString() : null }).eq("id", req.params.id).select("*").single();
-  if (error) return res.status(400).json({ success: false, message: "Unable to update withdrawal" });
-  if (status === 'rejected') await supabase.rpc("refund_withdrawal", { p_withdrawal_id: current.id });
-  await supabase.from("audit_logs").insert({ admin_id: req.user!.id, action: `withdrawal_${status}`, entity_type: "withdrawal", entity_id: current.id, metadata: { note } });
-  return res.json({ success: true, withdrawal: data });
-});
-
-router.get("/activities", async (_req, res) => {
-  const { data, error } = await supabase.from("activities").select("*").order("created_at", { ascending: false }).limit(200);
-  if (error) return res.status(500).json({ success: false, message: "Unable to load activities" });
-  return res.json({ success: true, activities: data ?? [] });
-});
-
-router.post("/activities", async (req, res) => {
-  const title = String(req.body?.title || "").trim().slice(0, 150);
-  const platform = String(req.body?.platform || "youtube");
-  const url = String(req.body?.url || "").trim().slice(0, 500);
-  const action = String(req.body?.action || "watch");
-  const reward = Number(req.body?.reward || 0);
-  if (!title || !/^https?:\/\//i.test(url) || !['youtube'].includes(platform) || !['watch','like','subscribe'].includes(action) || !Number.isFinite(reward) || reward <= 0 || reward > 1000) return res.status(400).json({ success: false, message: "Invalid activity details" });
-  const { data, error } = await supabase.from("activities").insert({ title, platform, url, action, reward_amount: Math.round(reward * 100), status: "active", created_by: req.user!.id }).select("*").single();
-  if (error) return res.status(400).json({ success: false, message: "Unable to create activity" });
-  await supabase.from("audit_logs").insert({ admin_id: req.user!.id, action: "activity_create", entity_type: "activity", entity_id: data.id, metadata: { title } });
-  return res.status(201).json({ success: true, activity: data });
-});
-
-router.get("/submissions", async (_req, res) => {
-  const { data, error } = await supabase.from("activity_submissions").select("id,user_id,activity_id,proof_url,status,reward_amount,admin_note,created_at,reviewed_at,users(username,email),activities(title,action,url)").order("created_at", { ascending: false }).limit(300);
-  if (error) return res.status(500).json({ success: false, message: "Unable to load submissions" });
-  return res.json({ success: true, submissions: data ?? [] });
-});
-
-router.patch("/submissions/:id", async (req, res) => {
-  const status = String(req.body?.status || "");
-  const note = String(req.body?.note || "").slice(0, 1000);
-  if (!['approved','rejected'].includes(status)) return res.status(400).json({ success: false, message: "Invalid review status" });
-  const { data: submission } = await supabase.from("activity_submissions").select("id,status").eq("id", req.params.id).maybeSingle();
-  if (!submission) return res.status(404).json({ success: false, message: "Submission not found" });
-  if (submission.status !== 'pending') return res.status(409).json({ success: false, message: "Submission has already been reviewed" });
-  const { data, error } = await supabase.rpc("review_submission", { p_submission_id: submission.id, p_status: status, p_admin_id: req.user!.id, p_note: note || null });
-  if (error) return res.status(400).json({ success: false, message: error.message });
-  return res.json({ success: true, submission: data });
-});
-
-router.get("/audit-logs", async (_req, res) => {
-  const { data, error } = await supabase.from("audit_logs").select("id,admin_id,action,entity_type,entity_id,metadata,created_at").order("created_at", { ascending: false }).limit(300);
-  if (error) return res.status(500).json({ success: false, message: "Unable to load audit logs" });
-  return res.json({ success: true, logs: data ?? [] });
-});
-
+import {Router} from "express";import {supabase} from "../config/supabase.js";import {requireAuth,requireAdmin} from "../middleware/authMiddleware.js";const router=Router();router.use(requireAuth,requireAdmin);
+const audit=async(admin_id:string,action:string,entity_type:string,entity_id:string|null,metadata:any={})=>{await supabase.from("audit_logs").insert({admin_id,action,entity_type,entity_id,metadata});};
+router.get("/overview",async(_req,res)=>{try{const [{count:users},{count:active},{count:suspended},{count:pendingPayments},{count:pendingWithdrawals},{count:pendingSubmissions},{data:platform},{data:paid}]=await Promise.all([supabase.from("users").select("id",{count:"exact",head:true}),supabase.from("users").select("id",{count:"exact",head:true}).eq("status","active"),supabase.from("users").select("id",{count:"exact",head:true}).in("status",["suspended","banned"]),supabase.from("payments").select("id",{count:"exact",head:true}).eq("status","pending"),supabase.from("withdrawals").select("id",{count:"exact",head:true}).eq("status","pending"),supabase.from("activity_submissions").select("id",{count:"exact",head:true}).eq("status","pending"),supabase.from("platform_wallet").select("balance").eq("id",1).maybeSingle(),supabase.from("payments").select("amount").eq("status","success")]);const revenue=(paid??[]).reduce((n,x)=>n+Number(x.amount||0),0);res.json({success:true,stats:{users:users??0,activeUsers:active??0,suspendedUsers:suspended??0,pendingPayments:pendingPayments??0,pendingWithdrawals:pendingWithdrawals??0,pendingSubmissions:pendingSubmissions??0,platformBalance:platform?.balance??0,activationRevenue:revenue}});}catch(e){console.error(e);res.status(500).json({success:false,message:"Unable to load admin overview"});}});
+router.get("/users",async(req,res)=>{const limit=Math.min(Math.max(Number(req.query.limit)||100,1),300),search=String(req.query.search||"").trim();let q=supabase.from("users").select("id,email,username,role,status,referral_code,referred_by,created_at,updated_at").order("created_at",{ascending:false}).limit(limit);if(search)q=q.or(`email.ilike.%${search}%,username.ilike.%${search}%`);const {data,error}=await q;if(error)return res.status(500).json({success:false,message:"Unable to load users"});res.json({success:true,users:data??[]});});
+router.get("/users/:id",async(req,res)=>{const [{data:user},{data:wallet},{data:ledger},{data:withdrawals},{data:submissions}]=await Promise.all([supabase.from("users").select("id,email,username,role,status,referral_code,referred_by,created_at,updated_at").eq("id",req.params.id).maybeSingle(),supabase.from("wallets").select("available,pending,total_earned,lifetime_withdrawn,updated_at").eq("user_id",req.params.id).maybeSingle(),supabase.from("wallet_ledger").select("id,entry_type,amount,balance_after,reference_id,description,created_at").eq("user_id",req.params.id).order("created_at",{ascending:false}).limit(100),supabase.from("withdrawals").select("id,amount,method,status,admin_note,created_at,processed_at").eq("user_id",req.params.id).order("created_at",{ascending:false}).limit(50),supabase.from("activity_submissions").select("id,activity_id,status,reward_amount,admin_note,created_at,reviewed_at").eq("user_id",req.params.id).order("created_at",{ascending:false}).limit(100)]);if(!user)return res.status(404).json({success:false,message:"User not found"});res.json({success:true,user,wallet,ledger:ledger??[],withdrawals:withdrawals??[],submissions:submissions??[]});});
+router.patch("/users/:id/status",async(req,res)=>{const status=String(req.body?.status||"");if(!["pending","active","suspended","banned"].includes(status))return res.status(400).json({success:false,message:"Invalid status"});if(req.params.id===req.user!.id&&status!=="active")return res.status(400).json({success:false,message:"You cannot suspend your own admin account"});const {data,error}=await supabase.from("users").update({status,updated_at:new Date().toISOString()}).eq("id",req.params.id).select("id,status").maybeSingle();if(error||!data)return res.status(404).json({success:false,message:"User not found"});await audit(req.user!.id,"user_status_change","user",req.params.id,{status});res.json({success:true,user:data});});
+router.patch("/users/:id/role",async(req,res)=>{const role=String(req.body?.role||"");if(!["user","admin"].includes(role)||req.params.id===req.user!.id)return res.status(400).json({success:false,message:"Invalid role change"});const {data,error}=await supabase.from("users").update({role,updated_at:new Date().toISOString()}).eq("id",req.params.id).select("id,role").maybeSingle();if(error||!data)return res.status(404).json({success:false,message:"User not found"});await audit(req.user!.id,"user_role_change","user",req.params.id,{role});res.json({success:true,user:data});});
+router.get("/payments",async(_req,res)=>{const {data,error}=await supabase.from("payments").select("id,user_id,reference,amount,amount_ghs,currency,purpose,status,provider_reference,created_at,paid_at,verified_at,users(username,email)").order("created_at",{ascending:false}).limit(300);if(error)return res.status(500).json({success:false,message:"Unable to load payments"});res.json({success:true,payments:data??[]});});
+router.get("/withdrawals",async(_req,res)=>{const {data,error}=await supabase.from("withdrawals").select("id,user_id,amount,method,account_details,status,admin_note,created_at,processed_at,users(username,email)").order("created_at",{ascending:false}).limit(300);if(error)return res.status(500).json({success:false,message:"Unable to load withdrawals"});res.json({success:true,withdrawals:data??[]});});
+router.patch("/withdrawals/:id",async(req,res)=>{const status=String(req.body?.status||""),note=String(req.body?.note||"").slice(0,1000);if(!["approved","rejected","paid"].includes(status))return res.status(400).json({success:false,message:"Invalid withdrawal status"});const {data,error}=await supabase.rpc("review_withdrawal",{p_withdrawal_id:req.params.id,p_status:status,p_admin_id:req.user!.id,p_note:note});if(error)return res.status(400).json({success:false,message:error.message.includes("FINALIZED")?"Withdrawal is already finalized":"Unable to update withdrawal"});res.json({success:true,withdrawal:data});});
+router.get("/activities",async(_req,res)=>{const {data,error}=await supabase.from("activities").select("*").order("created_at",{ascending:false}).limit(300);if(error)return res.status(500).json({success:false,message:"Unable to load campaigns"});res.json({success:true,activities:data??[]});});
+router.patch("/activities/:id",async(req,res)=>{const updates:any={};if(req.body?.status&&["active","paused","archived"].includes(String(req.body.status)))updates.status=String(req.body.status);if(req.body?.title!==undefined)updates.title=String(req.body.title).trim().slice(0,150);if(req.body?.rewardGhs!==undefined){const n=Number(req.body.rewardGhs);if(!Number.isFinite(n)||n<=0||n>1000)return res.status(400).json({success:false,message:"Invalid reward"});updates.reward_amount=Math.round(n*100)}if(!Object.keys(updates).length)return res.status(400).json({success:false,message:"No changes supplied"});const {data,error}=await supabase.from("activities").update(updates).eq("id",req.params.id).select("*").maybeSingle();if(error||!data)return res.status(404).json({success:false,message:"Campaign not found"});await audit(req.user!.id,"activity_update","activity",data.id,updates);res.json({success:true,activity:data});});
+router.get("/submissions",async(_req,res)=>{const {data,error}=await supabase.from("activity_submissions").select("id,user_id,activity_id,proof_url,status,reward_amount,admin_note,created_at,reviewed_at,users(username,email),activities(title,action,url,reward_amount)").order("created_at",{ascending:false}).limit(400);if(error)return res.status(500).json({success:false,message:"Unable to load submissions"});res.json({success:true,submissions:data??[]});});
+router.patch("/submissions/:id",async(req,res)=>{const status=String(req.body?.status||""),note=String(req.body?.note||"").slice(0,1000);if(!["approved","rejected"].includes(status))return res.status(400).json({success:false,message:"Invalid review status"});const {data,error}=await supabase.rpc("review_submission",{p_submission_id:req.params.id,p_status:status,p_admin_id:req.user!.id,p_note:note||null});if(error)return res.status(400).json({success:false,message:error.message.includes("ALREADY")?"Submission has already been reviewed":"Unable to review submission"});res.json({success:true,submission:data});});
+router.get("/referrals",async(_req,res)=>{const {data,error}=await supabase.from("referrals").select("id,referrer_id,referred_user_id,bonus_amount,status,created_at,credited_at").order("created_at",{ascending:false}).limit(300);if(error)return res.status(500).json({success:false,message:"Unable to load referrals"});res.json({success:true,referrals:data??[]});});
+router.get("/ledger",async(_req,res)=>{const {data,error}=await supabase.from("wallet_ledger").select("id,user_id,entry_type,amount,balance_after,reference_id,description,created_at,users(username,email)").order("created_at",{ascending:false}).limit(500);if(error)return res.status(500).json({success:false,message:"Unable to load ledger"});res.json({success:true,ledger:data??[]});});
+router.get("/audit-logs",async(_req,res)=>{const {data,error}=await supabase.from("audit_logs").select("id,admin_id,action,entity_type,entity_id,metadata,created_at").order("created_at",{ascending:false}).limit(500);if(error)return res.status(500).json({success:false,message:"Unable to load audit logs"});res.json({success:true,logs:data??[]});});
+router.get("/announcements",async(_req,res)=>{const {data,error}=await supabase.from("announcements").select("id,title,message,active,created_by,created_at").order("created_at",{ascending:false}).limit(100);if(error)return res.status(500).json({success:false,message:"Unable to load announcements"});res.json({success:true,announcements:data??[]});});
+router.post("/announcements",async(req,res)=>{const title=String(req.body?.title||"").trim().slice(0,120),message=String(req.body?.message||"").trim().slice(0,2000);if(title.length<3||message.length<3)return res.status(400).json({success:false,message:"Title and message are required"});const {data,error}=await supabase.from("announcements").insert({title,message,created_by:req.user!.id,active:true}).select("*").single();if(error)return res.status(400).json({success:false,message:"Unable to create announcement"});const {data:users}=await supabase.from("users").select("id").eq("status","active").limit(5000);if(users?.length)await supabase.from("notifications").insert(users.map(u=>({user_id:u.id,title,message})));await audit(req.user!.id,"announcement_create","announcement",data.id,{title});res.status(201).json({success:true,announcement:data});});
+router.patch("/announcements/:id",async(req,res)=>{const {data,error}=await supabase.from("announcements").update({active:Boolean(req.body?.active)}).eq("id",req.params.id).select("*").maybeSingle();if(error||!data)return res.status(404).json({success:false,message:"Announcement not found"});await audit(req.user!.id,"announcement_update","announcement",data.id,{active:data.active});res.json({success:true,announcement:data});});
+router.get("/settings",async(_req,res)=>{const {data,error}=await supabase.from("system_settings").select("key,value,updated_at").order("key");if(error)return res.status(500).json({success:false,message:"Unable to load settings"});res.json({success:true,settings:data??[]});});
+router.patch("/settings/:key",async(req,res)=>{const key=String(req.params.key||"").trim();if(!/^[a-z0-9_-]{2,50}$/.test(key))return res.status(400).json({success:false,message:"Invalid setting key"});let value=req.body?.value;if(value===undefined)return res.status(400).json({success:false,message:"Setting value is required"});if(key==="withdrawal_limits"){const min=Number(value.min_ghs),max=Number(value.max_ghs);if(!Number.isFinite(min)||!Number.isFinite(max)||min<1||max<min||max>100000)return res.status(400).json({success:false,message:"Invalid withdrawal limits"});value={min_ghs:min,max_ghs:max}}const {data,error}=await supabase.from("system_settings").upsert({key,value,updated_at:new Date().toISOString()},{onConflict:"key"}).select("key,value,updated_at").single();if(error)return res.status(400).json({success:false,message:"Unable to save setting"});await audit(req.user!.id,"system_setting_update","system_setting",null,{key,value});res.json({success:true,setting:data});});
 export default router;
