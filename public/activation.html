@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+  <meta
+    name="theme-color"
+    content="#060816"
+  >
+  <meta
+    name="description"
+    content="Securely activate your Vsbil account."
+  >
+  <title>Activate Account — Vsbil</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/auth.css">
+  <link rel="stylesheet" href="/css/activation.css">
+</head>
+<body class="auth-page activation-page">
+  <!-- Ambient background -->
+  <div class="activation-orb activation-orb-one"></div>
+  <div class="activation-orb activation-orb-two"></div>
+  <main class="auth-container">
+    <!-- Brand -->
+    <a href="/" class="auth-logo">
+      Vsbil
+    </a>
+    <!-- Activation Card -->
+    <section class="activation-card">
+      <!-- Status indicator -->
+      <div class="activation-status">
+        <span class="status-dot"></span>
+        Secure activation
+      </div>
+      <!-- Icon -->
+      <div
+        class="activation-icon"
+        id="activationIcon"
+        aria-hidden="true"
+      >
+        ✓
+      </div>
+      <!-- Header -->
+      <div class="auth-header">
+        <p class="eyebrow">
+          ACCOUNT CREATED
+        </p>
+        <h1>
+          Activate your account.
+        </h1>
+        <p>
+          Your Vsbil account has been created successfully.
+          Complete your one-time activation to unlock the platform.
+        </p>
+      </div>
+      <!-- Offer -->
+      <div class="activation-offer">
+        <div class="offer-main">
+          <span class="offer-label">
+            LAUNCH OFFER
+          </span>
+          <div class="offer-price">
+            <span class="currency">GH₵</span>
+            <span>50</span>
+          </div>
+          <p>
+            One-time account activation
+          </p>
+        </div>
+        <div class="offer-discount">
+          <span>Regular price</span>
+          <strong>GH₵100</strong>
+          <small>50% OFF</small>
+        </div>
+      </div>
+      <!-- Benefits -->
+      <div class="activation-features">
+        <div class="activation-feature">
+          <span class="feature-icon">✓</span>
+          <div>
+            <strong>Access campaigns</strong>
+            <p>Discover eligible creator campaigns.</p>
+          </div>
+        </div>
+        <div class="activation-feature">
+          <span class="feature-icon">✓</span>
+          <div>
+            <strong>Earn eligible rewards</strong>
+            <p>Complete verified activities and earn coins.</p>
+          </div>
+        </div>
+        <div class="activation-feature">
+          <span class="feature-icon">✓</span>
+          <div>
+            <strong>Vsbil Wallet</strong>
+            <p>Track your available and pending rewards.</p>
+          </div>
+        </div>
+        <div class="activation-feature">
+          <span class="feature-icon">✓</span>
+          <div>
+            <strong>Referral features</strong>
+            <p>Invite others and track your referrals.</p>
+          </div>
+        </div>
+      </div>
+      <!-- Main action -->
+      <button
+        type="button"
+        class="primary-btn activation-btn"
+        id="activateBtn"
+      >
+        <span class="btn-text">
+          Activate for GH₵50
+        </span>
+        <span
+          class="btn-spinner"
+          aria-hidden="true"
+        ></span>
+        <span class="btn-arrow">
+          →
+        </span>
+      </button>
+      <!-- Security information -->
+      <div class="activation-security">
+        <span class="security-icon">
+          🔒
+        </span>
+        <div>
+          <strong>Secure payment</strong>
+          <p>
+            Your payment is processed securely.
+            Vsbil never receives or stores your card PIN.
+          </p>
+        </div>
+      </div>
+      <!-- Small status for accessibility/fallback -->
+      <p
+        class="activation-note"
+        id="activationMessage"
+        aria-live="polite"
+      >
+        Ready for secure activation.
+      </p>
+    </section>
+    <!-- Footer navigation -->
+    <div class="activation-footer">
+      <a href="/">
+        ← Back to Vsbil
+      </a>
+      <span>
+        Secure • Protected • Vsbil
+      </span>
+    </div>
+  </main>
+  <!-- =====================================================
+       GLOBAL MESSAGE MODAL
+       ===================================================== -->
+  <div
+    class="message-modal"
+    id="messageModal"
+    aria-hidden="true"
+  >
+    <div
+      class="message-backdrop"
+      id="messageBackdrop"
+    ></div>
+    <section
+      class="message-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="messageTitle"
+    >
+      <button
+        type="button"
+        class="message-close"
+        id="messageClose"
+        aria-label="Close"
+      >
+        ×
+      </button>
+      <div
+        class="message-icon"
+        id="messageIcon"
+      >
+        ✓
+      </div>
+      <div class="message-content">
+        <p
+          class="message-eyebrow"
+          id="messageEyebrow"
+        >
+          VSBIL
+        </p>
+        <h2 id="messageTitle">
+          Payment confirmed
+        </h2>
+        <p id="messageText">
+          Your payment has been successfully verified.
+        </p>
+      </div>
+      <div
+        class="message-actions"
+        id="messageActions"
+      >
+        <button
+          type="button"
+          class="primary-btn message-primary"
+          id="messagePrimary"
+        >
+          Continue
+        </button>
+        <button
+          type="button"
+          class="message-secondary"
+          id="messageSecondary"
+          hidden
+        >
+          Try again
+        </button>
+      </div>
+      <div
+        class="message-help"
+        id="messageHelp"
+        hidden
+      >
+        <span>Need help?</span>
+        <button type="button" id="messageHelpBtn">
+          Contact support
+        </button>
+      </div>
+    </section>
+  </div>
+  <script src="/js/activation.js"></script>
+</body>
+</html>

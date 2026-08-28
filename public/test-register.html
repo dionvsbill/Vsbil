@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Vsbil Registration Test</title>
+</head>
+<body>
+  <h2>Vsbil Registration Test</h2>
+
+  <button id="registerBtn">Create Test Account</button>
+
+  <pre id="result"></pre>
+
+  <script>
+    document.getElementById("registerBtn").addEventListener("click", async () => {
+      const result = document.getElementById("result");
+
+      result.textContent = "Creating account...";
+
+      try {
+        const response = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email: "test@example.com",
+            password: "TestPassword123!",
+            username: "testuser123"
+          })
+        });
+
+        const data = await response.json();
+
+        result.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        result.textContent = "Request failed: " + error.message;
+      }
+    });
+  </script>
+</body>
+</html>
