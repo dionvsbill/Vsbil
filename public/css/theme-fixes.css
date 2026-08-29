@@ -3,13 +3,10 @@ html,body{background:#070a12!important;color:#f7f8fc!important}
 body:not(.auth-page),body:not(.auth-page)>main,body:not(.auth-page) main{background-color:#070a12!important;color:#f7f8fc!important}
 body:not(.auth-page) section,.hero,.section,.creator-section,.cta{background-color:transparent!important;color:#f7f8fc!important}
 body:not(.auth-page) .card,body:not(.auth-page) .wallet-preview>div,body:not(.auth-page) .dashboard-card,body:not(.auth-page) .panel,body:not(.auth-page) .surface,body:not(.auth-page) .settings-card,body:not(.auth-page) .activity-card,body:not(.auth-page) .campaign-card{color:#f7f8fc!important;background-color:#11182a!important}
-.card h1,.card h2,.card h3,.card h4,.card strong,.card label,.wallet-preview strong,.dashboard-card h1,.dashboard-card h2,.dashboard-card h3,.dashboard-card strong{color:#f7f8fc!important}
-.card p,.card small,.card span,.wallet-preview span,.dashboard-card p{color:#9ba7ba!important}
-.card a:not(.primary-btn),.dashboard-card a{color:#a49dff!important}
-.site-footer{background:#060911!important;color:#f7f8fc!important}
-.site-footer a{color:#9ba7ba!important}.site-footer a:hover{color:#fff!important}
+.card h1,.card h2,.card h3,.card h4,.card strong,.card label,.wallet-preview strong,.dashboard-card h1,.dashboard-card h2,.dashboard-card h3,.dashboard-card strong{color:#f7f8fc!important}.card p,.card small,.card span,.wallet-preview span,.dashboard-card p{color:#9ba7ba!important}.card a:not(.primary-btn),.dashboard-card a{color:#a49dff!important}
+.site-footer{background:#060911!important;color:#f7f8fc!important}.site-footer a{color:#9ba7ba!important}.site-footer a:hover{color:#fff!important}
 .logo img,.brand-logo img{display:block;max-width:100%;height:auto}.primary-btn{color:#fff!important}.secondary-btn{color:#f7f8fc!important}
-.vsbil-public-header{background:rgba(7,10,18,.96)!important;border-bottom-color:rgba(255,255,255,.07)!important}
-.vsbil-brandmark{display:inline-flex!important;align-items:center;gap:10px}.vsbil-brandmark img{width:44px!important;height:44px!important;object-fit:contain}.vsbil-brandmark span{color:#fff!important}
+/* Header is transparent so the dark page surface shows through. The logo asset itself is also transparent. */
+.vsbil-public-header{background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}.vsbil-public-header .vsbil-public-header-inner{min-height:72px}.vsbil-brandmark{display:inline-flex!important;align-items:center!important;gap:10px!important;color:#fff!important;text-decoration:none!important}.vsbil-brandmark img{display:block!important;width:46px!important;height:46px!important;object-fit:contain!important;background:transparent!important;border:0!important;box-shadow:none!important}.vsbil-brandmark span{color:#fff!important;font-size:19px!important;font-weight:950!important;letter-spacing:-.4px!important}
 .form-message:empty{display:none}button:disabled{cursor:not-allowed;opacity:.65}.vsbil-global-footer+*{margin-top:0}
 @media(prefers-reduced-motion:reduce){.vsbil-page-loader *{animation:none!important}}
