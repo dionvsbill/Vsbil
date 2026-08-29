@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import authRouter from "./routes/auth.js";
 import authAdvancedRouter from "./routes/authAdvanced.js";
+import authProductionRouter from "./routes/authProduction.js";
 import paymentRouter from "./routes/payment.js";
 import dashboardRouter from "./routes/dashboard.js";
 import withdrawalRouter from "./routes/withdrawals.js";
@@ -15,36 +16,6 @@ import notificationRouter from "./routes/notifications.js";
 import youtubeRouter from "./routes/youtube.js";
 import verificationRouter from "./routes/verification.js";
 import { rateLimit } from "./middleware/rateLimit.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const app = express();
-const nodeEnv = process.env.NODE_ENV?.trim() || "development";
-const allowedOrigin = process.env.APP_URL?.trim() || "";
-
-app.disable("x-powered-by");
-app.set("trust proxy", 1);
-app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" }, referrerPolicy: { policy: "strict-origin-when-cross-origin" }, frameguard: { action: "sameorigin" }, hsts: nodeEnv === "production" ? undefined : false }));
-app.use(cors({ origin: (origin, cb) => { if (!origin || origin === allowedOrigin || origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:") || origin.endsWith(".app.github.dev")) return cb(null, true); console.warn(`[CORS] Blocked origin: ${origin}`); return cb(new Error("CORS origin denied")); }, credentials: true, methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], allowedHeaders: ["Content-Type", "Authorization", "Accept", "X-Requested-With", "X-Idempotency-Key"], exposedHeaders: ["X-Request-Id"], optionsSuccessStatus: 204 }));
-app.use(express.json({ limit: "100kb", verify: (req, _res, buf) => { req.rawBody = Buffer.from(buf); } }));
-app.use((req, res, next) => { res.setHeader("X-Request-Id", `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`); if (req.path.startsWith("/api/")) { res.setHeader("Cache-Control", "no-store"); res.setHeader("Pragma", "no-cache"); } next(); });
-
-app.use("/api/auth", rateLimit({ windowMs: 60_000, max: 30, key: req => `${req.ip}:auth` }), authRouter);
-app.use("/api/auth/advanced", rateLimit({ windowMs: 60_000, max: 12, key: req => `${req.ip}:advanced-auth` }), authAdvancedRouter);
-app.use("/api/payment", rateLimit({ windowMs: 60_000, max: 20, key: req => `${req.ip}:payment` }), paymentRouter);
-app.use("/api/youtube", rateLimit({ windowMs: 60_000, max: 20, key: req => `${req.ip}:youtube` }), youtubeRouter);
-app.use("/api/verification", rateLimit({ windowMs: 60_000, max: 10, key: req => `${req.ip}:verification` }), verificationRouter);
-app.use("/api/dashboard", dashboardRouter);
-app.use("/api/withdrawals", withdrawalRouter);
-app.use("/api/activities", activityRouter);
-app.use("/api/users", usersRouter);
-app.use("/api/notifications", notificationRouter);
-app.use("/api/admin", adminRouter);
-app.get("/api/health", async (_req, res) => res.json({ success: true, service: "VSBIL API", status: "online", environment: nodeEnv, time: new Date().toISOString() }));
-
-const publicDirectory = path.resolve(__dirname, "../public");
-app.use(express.static(publicDirectory, { extensions: ["html"], setHeaders: res => res.setHeader("X-Content-Type-Options", "nosniff") }));
-app.all("/api/*splat", (_req, res) => res.status(404).json({ success: false, message: "API endpoint not found", code: "NOT_FOUND" }));
-app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => { console.error("Unhandled application error", error); if (res.headersSent) return; res.status(500).json({ success: false, message: "Internal server error", code: res.getHeader("X-Request-Id") }); });
-
-export default app;
+const __filename=fileURLToPath(import.meta.url);const __dirname=path.dirname(__filename);const app=express();const nodeEnv=process.env.NODE_ENV?.trim()||"development";const allowedOrigin=process.env.APP_URL?.trim()||"";
+app.disable("x-powered-by");app.set("trust proxy",1);app.use(helmet({contentSecurityPolicy:false,crossOriginResourcePolicy:{policy:"cross-origin"},referrerPolicy:{policy:"strict-origin-when-cross-origin"},frameguard:{action:"sameorigin"},hsts:nodeEnv==="production"?undefined:false}));app.use(cors({origin:(origin,cb)=>{if(!origin||origin===allowedOrigin||origin.startsWith("http://localhost:")||origin.startsWith("http://127.0.0.1:")||origin.endsWith(".app.github.dev"))return cb(null,true);return cb(new Error("CORS origin denied"));},credentials:true,methods:["GET","POST","PUT","PATCH","DELETE","OPTIONS"],allowedHeaders:["Content-Type","Authorization","Accept","X-Requested-With","X-Idempotency-Key"],exposedHeaders:["X-Request-Id"],optionsSuccessStatus:204}));app.use(express.json({limit:"100kb",verify:(req,_res,buf)=>{req.rawBody=Buffer.from(buf);}}));app.use((req,res,next)=>{res.setHeader("X-Request-Id",`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,10)}`);if(req.path.startsWith("/api/")){res.setHeader("Cache-Control","no-store");res.setHeader("Pragma","no-cache");}next();});
+app.use("/api/auth",rateLimit({windowMs:60000,max:30,key:req=>`${req.ip}:auth`}),authRouter);app.use("/api/auth/advanced",rateLimit({windowMs:60000,max:12,key:req=>`${req.ip}:advanced-auth`}),authAdvancedRouter);app.use("/api/auth/production",rateLimit({windowMs:60000,max:15,key:req=>`${req.ip}:production-auth`}),authProductionRouter);app.use("/api/payment",rateLimit({windowMs:60000,max:20,key:req=>`${req.ip}:payment`}),paymentRouter);app.use("/api/youtube",rateLimit({windowMs:60000,max:20,key:req=>`${req.ip}:youtube`}),youtubeRouter);app.use("/api/verification",rateLimit({windowMs:60000,max:10,key:req=>`${req.ip}:verification`}),verificationRouter);app.use("/api/dashboard",dashboardRouter);app.use("/api/withdrawals",withdrawalRouter);app.use("/api/activities",activityRouter);app.use("/api/users",usersRouter);app.use("/api/notifications",notificationRouter);app.use("/api/admin",adminRouter);app.get("/api/health",async(_req,res)=>res.json({success:true,service:"VSBIL API",status:"online",environment:nodeEnv,time:new Date().toISOString()}));const publicDirectory=path.resolve(__dirname,"../public");app.use(express.static(publicDirectory,{extensions:["html"],setHeaders:res=>res.setHeader("X-Content-Type-Options","nosniff")}));app.all("/api/*splat",(_req,res)=>res.status(404).json({success:false,message:"API endpoint not found",code:"NOT_FOUND"}));app.use((error:unknown,_req,res,_next)=>{console.error("Unhandled application error",error);if(res.headersSent)return;res.status(500).json({success:false,message:"Internal server error",code:"INTERNAL_ERROR",requestId:res.getHeader("X-Request-Id")});});export default app;
