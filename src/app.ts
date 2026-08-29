@@ -4,6 +4,7 @@ import helmet from "helmet";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import authRouter from "./routes/auth.js";
+import authAdvancedRouter from "./routes/authAdvanced.js";
 import paymentRouter from "./routes/payment.js";
 import dashboardRouter from "./routes/dashboard.js";
 import withdrawalRouter from "./routes/withdrawals.js";
@@ -29,6 +30,7 @@ app.use(express.json({ limit: "100kb", verify: (req, _res, buf) => { req.rawBody
 app.use((req, res, next) => { res.setHeader("X-Request-Id", `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`); if (req.path.startsWith("/api/")) { res.setHeader("Cache-Control", "no-store"); res.setHeader("Pragma", "no-cache"); } next(); });
 
 app.use("/api/auth", rateLimit({ windowMs: 60_000, max: 30, key: req => `${req.ip}:auth` }), authRouter);
+app.use("/api/auth/advanced", rateLimit({ windowMs: 60_000, max: 12, key: req => `${req.ip}:advanced-auth` }), authAdvancedRouter);
 app.use("/api/payment", rateLimit({ windowMs: 60_000, max: 20, key: req => `${req.ip}:payment` }), paymentRouter);
 app.use("/api/youtube", rateLimit({ windowMs: 60_000, max: 20, key: req => `${req.ip}:youtube` }), youtubeRouter);
 app.use("/api/verification", rateLimit({ windowMs: 60_000, max: 10, key: req => `${req.ip}:verification` }), verificationRouter);
@@ -43,6 +45,6 @@ app.get("/api/health", async (_req, res) => res.json({ success: true, service: "
 const publicDirectory = path.resolve(__dirname, "../public");
 app.use(express.static(publicDirectory, { extensions: ["html"], setHeaders: res => res.setHeader("X-Content-Type-Options", "nosniff") }));
 app.all("/api/*splat", (_req, res) => res.status(404).json({ success: false, message: "API endpoint not found", code: "NOT_FOUND" }));
-app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => { console.error("Unhandled application error", error); if (res.headersSent) return; res.status(500).json({ success: false, message: "Internal server error", code: "INTERNAL_ERROR", requestId: res.getHeader("X-Request-Id") }); });
+app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => { console.error("Unhandled application error", error); if (res.headersSent) return; res.status(500).json({ success: false, message: "Internal server error", code: res.getHeader("X-Request-Id") }); });
 
 export default app;
