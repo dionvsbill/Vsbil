@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="VSBIL Security and Responsible Disclosure Policy.">
+  <title>VSBIL — Security</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main class="legal-page">
+    <a href="/">← VSBIL</a>
+    <p class="eyebrow">SECURITY &amp; TRUST</p>
+    <h1>Security &amp; Responsible Disclosure</h1>
+    <p><strong>Version 1.0 · Effective August 29, 2026</strong></p>
+
+    <h2>Security objective</h2>
+    <p>VSBIL treats account identity, OAuth credentials, payments, wallet balances, withdrawals and administrative actions as security-sensitive. The platform is designed so that authoritative financial and authorization decisions occur on the server rather than in browser-controlled state.</p>
+
+    <h2>Account protection</h2>
+    <p>Authentication should use protected sessions, verified credentials and appropriate rate limits. Users should use a unique password, protect verification codes and immediately report suspected account compromise.</p>
+
+    <h2>OAuth protection</h2>
+    <p>Google and YouTube connections use OAuth. Access and refresh credentials, where required, are stored server-side in encrypted form. VSBIL does not need a user's Google password to connect the service.</p>
+
+    <h2>Payment security</h2>
+    <p>Payment status is verified server-side. Provider webhooks should be validated and processed idempotently so the same payment cannot activate an account or credit a financial benefit twice.</p>
+
+    <h2>Wallet integrity</h2>
+    <p>Wallet changes should be represented by authoritative ledger entries. Negative balances are restricted by database constraints and withdrawal operations should reserve funds before review. Client-side balance values are never treated as proof of entitlement.</p>
+
+    <h2>Administrative security</h2>
+    <p>Administrative actions should use role-based authorization and generate audit records. Sensitive operations include user suspension, reward changes, campaign moderation, withdrawal approval, settings changes and access to financial information.</p>
+
+    <h2>Monitoring</h2>
+    <p>Security events may record timestamps, account references, IP addresses, user-agent information and structured metadata when needed for protection and investigation. Monitoring is subject to the Privacy Policy and applicable law.</p>
+
+    <h2>Responsible disclosure</h2>
+    <p>If you discover a vulnerability, report it privately through VSBIL's designated support/security channel. Provide a clear description, affected endpoint or feature, reproducible steps and potential impact. Do not access unrelated accounts, copy private information, destroy data, deploy malware or intentionally disrupt availability.</p>
+
+    <h2>Incident response</h2>
+    <p>Security incidents may trigger containment, credential rotation, session revocation, provider notification, investigation, user communication and other response measures appropriate to the incident and legal requirements.</p>
+
+    <h2>No absolute-security promise</h2>
+    <p>Security controls reduce risk but cannot eliminate every threat. Users are responsible for protecting their own credentials and devices and for reporting suspicious activity promptly.</p>
+
+    <p><a href="/privacy.html">Privacy</a> · <a href="/acceptable-use.html">Acceptable Use</a> · <a href="/contact.html">Contact</a></p>
+  </main>
+</body>
+</html>
