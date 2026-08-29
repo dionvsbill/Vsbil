@@ -1,4 +1,25 @@
 import "dotenv/config";
 import app from "./app.js";
-const PORT=Number(process.env.PORT)||3000;
-app.listen(PORT,()=>console.log(`VSBIL production API listening on http://localhost:${PORT}`));
+
+const PORT = Number(process.env.PORT) || 3000;
+const isProduction = process.env.NODE_ENV === "production";
+const requiredProduction = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_ANON_KEY", "APP_URL", "APP_ENCRYPTION_KEY", "APP_STATE_SECRET"];
+if (isProduction) {
+  const missing = requiredProduction.filter(name => !process.env[name]?.trim());
+  if (missing.length) throw new Error(`Missing production environment variables: ${missing.join(", ")}`);
+}
+
+const server = app.listen(PORT, () => console.log(`VSBIL API listening on port ${PORT}`));
+
+const shutdown = (signal: string) => {
+  console.log(`Received ${signal}; shutting down gracefully…`);
+  server.close(error => {
+    if (error) { console.error("Graceful shutdown failed", error); process.exitCode = 1; }
+    process.exit();
+  });
+  setTimeout(() => process.exit(1), 10_000).unref();
+};
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("unhandledRejection", reason => console.error("Unhandled promise rejection", reason));
+process.on("uncaughtException", error => { console.error("Uncaught exception", error); shutdown("uncaughtException"); });
