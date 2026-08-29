@@ -1,2 +1,15 @@
-/* VSBIL final theme guardrails: dark-first, readable surfaces, consistent public shell. */
-html,body{background:#070a12;color:#f7f8fc}body,.auth-page{background-color:#070a12;color:#f7f8fc}.card,.wallet-preview>div,.dashboard-card,.panel,.surface,.settings-card,.activity-card,.campaign-card,.auth-card{color:#f7f8fc}.card h1,.card h2,.card h3,.card h4,.card strong,.card label,.wallet-preview strong,.dashboard-card h1,.dashboard-card h2,.dashboard-card h3,.dashboard-card strong{color:#f7f8fc}.card p,.card small,.card span,.wallet-preview span,.dashboard-card p{color:#9ba7ba}.card a:not(.primary-btn),.dashboard-card a{color:#a49dff}.site-footer{background:#060911;color:#f7f8fc}.site-footer a{color:#9ba7ba}.site-footer a:hover{color:#fff}.logo img,.brand-logo img{display:block;max-width:100%;height:auto}.primary-btn{color:#fff!important}.secondary-btn{color:#f7f8fc!important}.vsbil-public-header{background:rgba(7,10,18,.86);border-bottom-color:rgba(255,255,255,.07)}.vsbil-brandmark{display:inline-flex;align-items:center;gap:10px}.vsbil-brandmark img{width:44px!important;height:44px!important;object-fit:contain}.vsbil-brandmark span{color:#fff!important}.form-message:empty{display:none}button:disabled{cursor:not-allowed;opacity:.65}.vsbil-global-footer+*{margin-top:0}@media(prefers-reduced-motion:reduce){.vsbil-page-loader *{animation:none!important;transition:none!important}}
+/* VSBIL final theme guardrails — dark first, no accidental browser/default white surfaces. */
+html,body{background:#070a12!important;color:#f7f8fc!important}
+body:not(.auth-page),body:not(.auth-page)>main,body:not(.auth-page) main{background-color:#070a12!important;color:#f7f8fc!important}
+body:not(.auth-page) section,.hero,.section,.creator-section,.cta{background-color:transparent!important;color:#f7f8fc!important}
+body:not(.auth-page) .card,body:not(.auth-page) .wallet-preview>div,body:not(.auth-page) .dashboard-card,body:not(.auth-page) .panel,body:not(.auth-page) .surface,body:not(.auth-page) .settings-card,body:not(.auth-page) .activity-card,body:not(.auth-page) .campaign-card{color:#f7f8fc!important;background-color:#11182a!important}
+.card h1,.card h2,.card h3,.card h4,.card strong,.card label,.wallet-preview strong,.dashboard-card h1,.dashboard-card h2,.dashboard-card h3,.dashboard-card strong{color:#f7f8fc!important}
+.card p,.card small,.card span,.wallet-preview span,.dashboard-card p{color:#9ba7ba!important}
+.card a:not(.primary-btn),.dashboard-card a{color:#a49dff!important}
+.site-footer{background:#060911!important;color:#f7f8fc!important}
+.site-footer a{color:#9ba7ba!important}.site-footer a:hover{color:#fff!important}
+.logo img,.brand-logo img{display:block;max-width:100%;height:auto}.primary-btn{color:#fff!important}.secondary-btn{color:#f7f8fc!important}
+.vsbil-public-header{background:rgba(7,10,18,.96)!important;border-bottom-color:rgba(255,255,255,.07)!important}
+.vsbil-brandmark{display:inline-flex!important;align-items:center;gap:10px}.vsbil-brandmark img{width:44px!important;height:44px!important;object-fit:contain}.vsbil-brandmark span{color:#fff!important}
+.form-message:empty{display:none}button:disabled{cursor:not-allowed;opacity:.65}.vsbil-global-footer+*{margin-top:0}
+@media(prefers-reduced-motion:reduce){.vsbil-page-loader *{animation:none!important}}
