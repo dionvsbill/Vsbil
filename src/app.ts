@@ -46,7 +46,7 @@ app.use(cors({
   optionsSuccessStatus: 204,
 }));
 
-app.use(express.json({ limit: "100kb", verify: (req, _res, buf) => { req.rawBody = Buffer.from(buf); } }));
+app.use(express.json({ limit: "100kb", verify: (req, _res, buf) => { (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf); } }));
 app.use((req, res, next) => {
   res.setHeader("X-Request-Id", `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`);
   if (req.path.startsWith("/api/")) { res.setHeader("Cache-Control", "no-store"); res.setHeader("Pragma", "no-cache"); }
