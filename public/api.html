@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="VSBIL API and integration documentation.">
+  <title>VSBIL — API &amp; Integrations</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main class="legal-page">
+    <a href="/">← VSBIL</a>
+    <p class="eyebrow">DEVELOPER PLATFORM</p>
+    <h1>API &amp; Integrations</h1>
+    <p>VSBIL's API is designed for authenticated, auditable integrations. Public documentation is intentionally descriptive until production credentials, scopes and rate limits are formally published.</p>
+
+    <h2>Authentication</h2>
+    <p>Protected endpoints require authenticated sessions or approved service credentials. Secrets must remain server-side. API consumers must never place service-role keys, Paystack secret keys, Google client secrets or OAuth refresh tokens in browser code.</p>
+
+    <h2>Core API domains</h2>
+    <ul>
+      <li><strong>Authentication:</strong> registration, login, email verification and session security.</li>
+      <li><strong>Users:</strong> profile, account state and preferences.</li>
+      <li><strong>YouTube:</strong> OAuth connection, channel state and supported verification operations.</li>
+      <li><strong>Activities:</strong> campaign discovery, submissions and verification.</li>
+      <li><strong>Wallet:</strong> authoritative balance and transaction history.</li>
+      <li><strong>Payments:</strong> activation transactions and provider verification.</li>
+      <li><strong>Withdrawals:</strong> requests, review state and payout reconciliation.</li>
+      <li><strong>Referrals:</strong> qualification and reward records.</li>
+      <li><strong>Admin:</strong> privileged moderation, financial review and audit operations.</li>
+    </ul>
+
+    <h2>API design principles</h2>
+    <p>Endpoints should validate input, authorize the current actor, enforce rate limits, return safe errors, avoid leaking secrets and produce an auditable event for security-sensitive actions. Financial operations must be idempotent and backed by database transactions or equivalent atomic mechanisms.</p>
+
+    <h2>Webhooks</h2>
+    <p>Payment-provider webhooks must be authenticated/verified, deduplicated and processed idempotently. A webhook should never trust an amount or status supplied by an unverified browser request.</p>
+
+    <h2>Rate limits</h2>
+    <p>Rate limits may differ by endpoint and risk level. Authentication, verification-code, password-reset, withdrawal and administrative endpoints should have stricter controls than ordinary read operations.</p>
+
+    <h2>YouTube integration</h2>
+    <p>YouTube access is granted through OAuth scopes approved by the user. VSBIL uses only supported APIs and must respect provider quotas, data policies and revocation. API availability does not imply that YouTube will count an action toward monetization.</p>
+
+    <h2>Versioning</h2>
+    <p>Production APIs should be versioned before external publication. Breaking changes should receive a migration notice and a documented deprecation period where practical.</p>
+
+    <h2>Responsible use</h2>
+    <p>Do not use the API to scrape private data, automate prohibited engagement, bypass marketplace controls, create fraudulent accounts, manipulate wallets or overload the service.</p>
+
+    <h2>Developer access</h2>
+    <p>External API access should be granted only through an approved application or integration process. Credentials can be revoked when compromised, inactive or used contrary to policy.</p>
+
+    <p><a href="/security.html">Security</a> · <a href="/acceptable-use.html">Acceptable Use</a> · <a href="/privacy.html">Privacy</a> · <a href="/contact.html">Contact</a></p>
+  </main>
+</body>
+</html>
