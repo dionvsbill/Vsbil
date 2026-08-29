@@ -26,27 +26,21 @@ import { rateLimit } from "./middleware/rateLimit.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
-const nodeEnv = process.env.NODE_ENV?.trim() || "development";
+const nodeEnv = process.env.NODE_ENV?.trim().toLowerCase() || "development";
 const isProduction = nodeEnv === "production";
 
-// APP_URL may contain one or more trusted origins separated by commas.
-// Do not require an exact Codespaces URL: Codespaces hostnames are dynamic.
+/*
+ * VSBIL serves its frontend and API from the same Codespaces/production host.
+ * In development, including GitHub Codespaces, we intentionally allow the
+ * browser origin because the forwarded hostname/port can change between
+ * restarts. Production remains allow-listed through APP_URL.
+ */
 const configuredOrigins = new Set(
   (process.env.APP_URL ?? "")
     .split(",")
     .map((value) => value.trim().replace(/\/$/, ""))
     .filter(Boolean),
 );
-
-const isCodespacesOrigin = (origin: string) => {
-  try {
-    const url = new URL(origin);
-    return url.protocol === "https:" &&
-      (url.hostname.endsWith(".github.dev") || url.hostname.endsWith(".app.github.dev"));
-  } catch {
-    return false;
-  }
-};
 
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
@@ -60,23 +54,15 @@ app.use(helmet({
 
 app.use(cors({
   origin: (origin, callback) => {
-    // curl, server-to-server calls and health checks do not send Origin.
+    // Requests without Origin (curl, health checks, server-to-server) are valid.
     if (!origin) return callback(null, true);
 
+    // Codespaces/local development needs to follow the currently forwarded
+    // browser origin rather than a stale APP_URL. This is NOT enabled in prod.
+    if (!isProduction) return callback(null, true);
+
     const normalized = origin.replace(/\/$/, "");
-
-    // Explicit production/trusted frontend origin.
     if (configuredOrigins.has(normalized)) return callback(null, true);
-
-    // GitHub Codespaces assigns dynamic *.github.dev URLs. This is deliberately
-    // limited to GitHub's HTTPS Codespaces domain, never a generic wildcard.
-    if (isCodespacesOrigin(normalized)) return callback(null, true);
-
-    // Local development.
-    if (!isProduction && (
-      normalized.startsWith("http://localhost:") ||
-      normalized.startsWith("http://127.0.0.1:")
-    )) return callback(null, true);
 
     return callback(new Error("CORS origin denied"));
   },
