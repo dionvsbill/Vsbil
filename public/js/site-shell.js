@@ -1,7 +1,63 @@
-(() => { "use strict";
-const LOGO="/assets/vsbil-logo.svg",FOOTER="vsbilGlobalFooter",LOADER="vsbilPageLoader";
-function isAuthPage(){return document.body?.classList.contains("auth-page")||document.documentElement.classList.contains("auth-page")||/\/(login|register)\.html$/i.test(window.location.pathname)}
-function loader(){if(document.getElementById(LOADER))return;const e=document.createElement("div");e.id=LOADER;e.className="vsbil-page-loader";e.setAttribute("aria-label","Loading VSBIL");e.innerHTML=`<div class="vsbil-loader-box"><div class="vsbil-loader-mark"><img class="vsbil-loader-logo" src="${LOGO}" alt="VSBIL logo"></div><div class="vsbil-loader-name" aria-hidden="true">VSBIL</div><div class="vsbil-loader-label">BUILD • ENGAGE • GROW</div></div>`;document.body.prepend(e);const hide=()=>requestAnimationFrame(()=>setTimeout(()=>e.classList.add("is-hidden"),1150));window.addEventListener("load",hide,{once:true});setTimeout(hide,1800)}
-function footer(){if(isAuthPage())return;if(document.getElementById(FOOTER)||document.querySelector("footer.site-footer"))return;document.body.insertAdjacentHTML("beforeend",`<footer id="${FOOTER}" class="site-footer vsbil-global-footer"><div class="vsbil-footer-inner"><div class="vsbil-footer-grid"><div class="vsbil-footer-brand"><a class="vsbil-footer-brandmark" href="/" aria-label="VSBIL home"><img src="${LOGO}" alt=""><span>VSBIL</span></a><p>A modern platform connecting creators, communities and genuine digital participation through transparent campaigns and rewards.</p><div class="vsbil-footer-status"><span class="vsbil-status-dot"></span>Platform online</div></div><div class="vsbil-footer-col"><h4>Platform</h4><a href="/">Home</a><a href="/about.html">About VSBIL</a><a href="/activities.html">Activities</a><a href="/creator.html">Creator Hub</a><a href="/faq.html">Help Center</a></div><div class="vsbil-footer-col"><h4>Account</h4><a href="/login.html">Login</a><a href="/register.html">Create Account</a><a href="/dashboard.html">Dashboard</a><a href="/wallet.html">Rewards &amp; Wallet</a><a href="/settings.html">Settings</a></div><div class="vsbil-footer-col"><h4>Trust</h4><a href="/legal.html">Trust Center</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/security.html">Security</a><a href="/community-guidelines.html">Community Guidelines</a></div><div class="vsbil-footer-col"><h4>Policies</h4><a href="/acceptable-use.html">Acceptable Use</a><a href="/withdrawal-policy.html">Withdrawal Policy</a><a href="/refund-policy.html">Refund Policy</a><a href="/referral-policy.html">Referral Policy</a><a href="/advertising-policy.html">Advertising Policy</a><a href="/youtube-guidelines.html">YouTube Guidelines</a><a href="/contact.html">Contact Us</a><a href="/support.html">Support &amp; Reports</a></div></div><div class="vsbil-footer-bottom"><span>© ${new Date().getFullYear()} VSBIL. All rights reserved.</span><span class="vsbil-footer-legal"><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/cookie-policy.html">Cookies</a><a href="/data-rights.html">Data Rights</a></span></div></div></footer>`)}
-function boot(){loader();footer();document.documentElement.classList.add("vsbil-shell-ready")}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",boot,{once:true}):boot();
+(() => {
+  "use strict";
+  const LOGO = "/assets/vsbil-logo.svg";
+  const FOOTER = "vsbilGlobalFooter";
+  const LOADER = "vsbilPageLoader";
+  const TOKEN_KEY = "vsbil_access_token";
+
+  function isAuthPage() {
+    return document.body?.classList.contains("auth-page") || /\/(login|register)\.html$/i.test(window.location.pathname);
+  }
+
+  function hasSessionToken() {
+    try { return Boolean(localStorage.getItem(TOKEN_KEY)?.trim()); } catch { return false; }
+  }
+
+  async function routeAuthenticatedAuthPage() {
+    if (!isAuthPage() || !hasSessionToken()) return;
+    try {
+      const token = localStorage.getItem(TOKEN_KEY)?.trim();
+      const response = await fetch("/api/auth/session", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, credentials: "same-origin", body: JSON.stringify({ accessToken: token }) });
+      const data = await response.json().catch(() => null);
+      if (response.ok && data?.success && data.user) {
+        const target = data.user.status === "active" ? "/dashboard.html" : "/activate.html";
+        if (window.location.pathname !== target) window.location.replace(target);
+      } else if (response.status === 401) {
+        ["vsbil_access_token","vsbil_refresh_token","vsbil_expires_at","vsbil_expires_in","vsbil_token_type","vsbil_user"].forEach((key) => localStorage.removeItem(key));
+      }
+    } catch { /* Authentication pages remain usable if the API is temporarily unavailable. */ }
+  }
+
+  function loader() {
+    if (document.getElementById(LOADER)) return;
+    const e = document.createElement("div");
+    e.id = LOADER;
+    e.className = "vsbil-page-loader";
+    e.setAttribute("aria-label", "Loading VSBIL");
+    e.innerHTML = `<div class="vsbil-loader-box"><div class="vsbil-loader-mark"><img class="vsbil-loader-logo" src="${LOGO}" alt="VSBIL logo"></div><div class="vsbil-loader-name" aria-hidden="true">VSBIL</div><div class="vsbil-loader-label">BUILD • ENGAGE • GROW</div></div>`;
+    document.body.prepend(e);
+    const hide = () => requestAnimationFrame(() => setTimeout(() => e.classList.add("is-hidden"), 1150));
+    window.addEventListener("load", hide, { once: true });
+    setTimeout(hide, 1800);
+  }
+
+  function footer() {
+    if (isAuthPage()) return;
+    if (document.getElementById(FOOTER) || document.querySelector("footer.site-footer")) return;
+    document.body.insertAdjacentHTML("beforeend", `<footer id="${FOOTER}" class="site-footer vsbil-global-footer"><div class="vsbil-footer-inner"><div class="vsbil-footer-grid"><div class="vsbil-footer-brand"><a class="vsbil-footer-brandmark" href="/" aria-label="VSBIL home"><img src="${LOGO}" alt=""><span>VSBIL</span></a><p>A modern platform connecting creators, communities and genuine digital participation through transparent campaigns and rewards.</p><div class="vsbil-footer-status"><span class="vsbil-status-dot"></span>Platform online</div></div><div class="vsbil-footer-col"><h4>Platform</h4><a data-public-home href="/">Home</a><a href="/about.html">About VSBIL</a><a href="/activities.html">Activities</a><a href="/creator.html">Creator Hub</a><a href="/faq.html">Help Center</a></div><div class="vsbil-footer-col"><h4>Account</h4><a href="/login.html">Login</a><a href="/register.html">Create Account</a><a href="/dashboard.html">Dashboard</a><a href="/wallet.html">Rewards &amp; Wallet</a><a href="/settings.html">Settings</a></div><div class="vsbil-footer-col"><h4>Trust</h4><a href="/legal.html">Trust Center</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/security.html">Security</a><a href="/community-guidelines.html">Community Guidelines</a></div><div class="vsbil-footer-col"><h4>Policies</h4><a href="/acceptable-use.html">Acceptable Use</a><a href="/withdrawal-policy.html">Withdrawal Policy</a><a href="/refund-policy.html">Refund Policy</a><a href="/referral-policy.html">Referral Policy</a><a href="/advertising-policy.html">Advertising Policy</a><a href="/youtube-guidelines.html">YouTube Guidelines</a><a href="/contact.html">Contact Us</a><a href="/support.html">Support &amp; Reports</a></div></div><div class="vsbil-footer-bottom"><span>© ${new Date().getFullYear()} VSBIL. All rights reserved.</span><span class="vsbil-footer-legal"><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/cookie-policy.html">Cookies</a><a href="/data-rights.html">Data Rights</a></span></div></div></footer>`);
+    if (hasSessionToken()) {
+      const home = document.querySelector("[data-public-home]");
+      if (home) home.textContent = "Dashboard";
+      if (home) home.setAttribute("href", "/dashboard.html");
+    }
+  }
+
+  function boot() {
+    routeAuthenticatedAuthPage();
+    loader();
+    footer();
+    document.documentElement.classList.add("vsbil-shell-ready");
+  }
+
+  document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", boot, { once: true }) : boot();
 })();
