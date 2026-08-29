@@ -13,22 +13,53 @@ async function sendEmail(to: string, code: string): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from = process.env.EMAIL_FROM?.trim();
   if (!apiKey || !from) throw new Error("EMAIL_PROVIDER_NOT_CONFIGURED");
-  const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" }, body: JSON.stringify({ from, to: [to], subject: "Your VSBIL verification code", text: `Your VSBIL verification code is ${code}. It expires in 10 minutes. If you did not request this code, ignore this email.`, html: `<p>Your VSBIL verification code is <strong>${code}</strong>.</p><p>This code expires in 10 minutes.</p><p>If you did not request it, you can ignore this email.</p>` }) });
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      subject: "Your VSBIL verification code",
+      text: `Your VSBIL verification code is ${code}. It expires in 10 minutes. If you did not request this code, ignore this email.`,
+      html: `<p>Your VSBIL verification code is <strong>${code}</strong>.</p><p>This code expires in 10 minutes.</p><p>If you did not request it, you can ignore this email.</p>`,
+    }),
+  });
   if (!response.ok) throw new Error(`EMAIL_SEND_FAILED:${response.status}`);
 }
 
-function digest(code: string): string { return crypto.createHash("sha256").update(`${code}:${process.env.APP_STATE_SECRET ?? ""}`).digest("hex"); }
+function digest(code: string): string {
+  return crypto.createHash("sha256").update(`${code}:${process.env.APP_STATE_SECRET ?? ""}`).digest("hex");
+}
 
 router.post("/send", requireIdentity, async (req: Request, res: Response) => {
   try {
     const email = req.user!.email.toLowerCase();
-    const { data: latest } = await supabase.from("email_verification_codes").select("created_at").eq("user_id", req.user!.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
-    if (latest && Date.now() - new Date(latest.created_at).getTime() < RESEND_COOLDOWN_MS) return res.status(429).json({ success: false, message: "Please wait before requesting another code", code: "VERIFICATION_COOLDOWN" });
+    const { data: latest } = await supabase
+      .from("email_verification_codes")
+      .select("created_at")
+      .eq("user_id", req.user!.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (latest && Date.now() - new Date(latest.created_at).getTime() < RESEND_COOLDOWN_MS) {
+      return res.status(429).json({ success: false, message: "Please wait before requesting another code", code: "VERIFICATION_COOLDOWN" });
+    }
+
     const code = randomCode();
     const expiresAt = new Date(Date.now() + CODE_TTL_MS).toISOString();
-    const { error } = await supabase.from("email_verification_codes").insert({ user_id: req.user!.id, code_hash: digest(code), expires_at: expiresAt, attempts: 0 });
+    const { error } = await supabase.from("email_verification_codes").insert({
+      user_id: req.user!.id,
+      email,
+      code_hash: digest(code),
+      purpose: "email_verification",
+      expires_at: expiresAt,
+      attempts: 0,
+      max_attempts: MAX_ATTEMPTS,
+    });
     if (error) return res.status(500).json({ success: false, message: "Unable to create verification code" });
+
     await sendEmail(email, code);
+    await supabase.from("security_events").insert({ user_id: req.user!.id, event_type: "verification_code_sent", severity: "info" });
     return res.json({ success: true, message: "Verification code sent" });
   } catch (error) {
     console.error("Verification email", error);
@@ -39,18 +70,36 @@ router.post("/send", requireIdentity, async (req: Request, res: Response) => {
 router.post("/confirm", requireIdentity, async (req: Request, res: Response) => {
   const code = String(req.body?.code ?? "").trim();
   if (!/^\d{6}$/.test(code)) return res.status(400).json({ success: false, message: "Enter the 6-digit verification code" });
-  const { data: record, error } = await supabase.from("email_verification_codes").select("id,code_hash,expires_at,attempts,used_at").eq("user_id", req.user!.id).is("used_at", null).order("created_at", { ascending: false }).limit(1).maybeSingle();
+
+  const { data: record, error } = await supabase
+    .from("email_verification_codes")
+    .select("id,code_hash,expires_at,attempts,max_attempts,used_at")
+    .eq("user_id", req.user!.id)
+    .eq("purpose", "email_verification")
+    .is("used_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   if (error || !record) return res.status(400).json({ success: false, message: "No active verification code was found" });
-  if (record.attempts >= MAX_ATTEMPTS) return res.status(429).json({ success: false, message: "Too many attempts. Request a new code." });
+  if (record.attempts >= record.max_attempts) return res.status(429).json({ success: false, message: "Too many attempts. Request a new code." });
   if (new Date(record.expires_at).getTime() < Date.now()) return res.status(400).json({ success: false, message: "That verification code has expired" });
+
   const expected = digest(code);
   if (expected !== record.code_hash) {
     await supabase.from("email_verification_codes").update({ attempts: record.attempts + 1 }).eq("id", record.id);
+    await supabase.from("security_events").insert({ user_id: req.user!.id, event_type: "email_verification_failed", severity: "low", metadata: { attempt: record.attempts + 1 } });
     return res.status(400).json({ success: false, message: "Incorrect verification code" });
   }
-  await supabase.from("email_verification_codes").update({ used_at: new Date().toISOString() }).eq("id", record.id);
+
+  const verifiedAt = new Date().toISOString();
+  const { error: codeError } = await supabase.from("email_verification_codes").update({ used_at: verifiedAt }).eq("id", record.id);
+  if (codeError) return res.status(500).json({ success: false, message: "Unable to complete verification" });
+
+  const { error: userError } = await supabase.from("users").update({ email_verified_at: verifiedAt, updated_at: verifiedAt }).eq("id", req.user!.id);
+  if (userError) return res.status(500).json({ success: false, message: "Verification was recorded but your account could not be updated" });
+
   await supabase.from("security_events").insert({ user_id: req.user!.id, event_type: "email_verified", severity: "info" });
-  return res.json({ success: true, verified: true });
+  return res.json({ success: true, verified: true, verifiedAt });
 });
 
 export default router;
