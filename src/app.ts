@@ -29,14 +29,8 @@ const app = express();
 const nodeEnv = process.env.NODE_ENV?.trim() || "development";
 const isProduction = nodeEnv === "production";
 
-/*
- * VSBIL normally serves the frontend and API from the same origin, so that
- * origin must always be accepted. APP_URL may contain one or more explicit
- * origins (comma separated) for trusted external frontends.
- *
- * Codespaces uses dynamic *.github.dev hosts. They are accepted only outside
- * production; production should use APP_URL explicitly.
- */
+// APP_URL may contain one or more trusted origins separated by commas.
+// Do not require an exact Codespaces URL: Codespaces hostnames are dynamic.
 const configuredOrigins = new Set(
   (process.env.APP_URL ?? "")
     .split(",")
@@ -44,22 +38,11 @@ const configuredOrigins = new Set(
     .filter(Boolean),
 );
 
-const forwardedProtocol = (req: express.Request) =>
-  String(req.headers["x-forwarded-proto"] ?? req.protocol).split(",")[0].trim();
-
-const forwardedHost = (req: express.Request) =>
-  String(req.headers["x-forwarded-host"] ?? req.headers.host ?? "").split(",")[0].trim();
-
-const requestOrigin = (req: express.Request) => {
-  const protocol = forwardedProtocol(req);
-  const host = forwardedHost(req);
-  return protocol && host ? `${protocol}://${host}`.replace(/\/$/, "") : "";
-};
-
 const isCodespacesOrigin = (origin: string) => {
   try {
     const url = new URL(origin);
-    return url.protocol === "https:" && (url.hostname.endsWith(".github.dev") || url.hostname.endsWith(".app.github.dev"));
+    return url.protocol === "https:" &&
+      (url.hostname.endsWith(".github.dev") || url.hostname.endsWith(".app.github.dev"));
   } catch {
     return false;
   }
@@ -67,47 +50,42 @@ const isCodespacesOrigin = (origin: string) => {
 
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
-app.use(
-  helmet({
-    contentSecurityPolicy: false,
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
-    frameguard: { action: "sameorigin" },
-    hsts: isProduction ? undefined : false,
-  }),
-);
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  frameguard: { action: "sameorigin" },
+  hsts: isProduction ? undefined : false,
+}));
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Non-browser requests (curl, health checks, server-to-server) have no Origin.
-      if (!origin) return callback(null, true);
+app.use(cors({
+  origin: (origin, callback) => {
+    // curl, server-to-server calls and health checks do not send Origin.
+    if (!origin) return callback(null, true);
 
-      const normalized = origin.replace(/\/$/, "");
-      const sameOrigin = configuredOrigins.has(normalized) ||
-        normalized === requestOrigin((undefined as unknown) as express.Request);
+    const normalized = origin.replace(/\/$/, "");
 
-      // The callback cannot receive req, so the same-origin comparison above is
-      // supplemented by the safe development-host rule below. Production uses
-      // APP_URL and therefore never relies on a wildcard.
-      if (sameOrigin || (!isProduction && isCodespacesOrigin(normalized))) {
-        return callback(null, true);
-      }
+    // Explicit production/trusted frontend origin.
+    if (configuredOrigins.has(normalized)) return callback(null, true);
 
-      if (!isProduction &&
-        (normalized.startsWith("http://localhost:") || normalized.startsWith("http://127.0.0.1:"))) {
-        return callback(null, true);
-      }
+    // GitHub Codespaces assigns dynamic *.github.dev URLs. This is deliberately
+    // limited to GitHub's HTTPS Codespaces domain, never a generic wildcard.
+    if (isCodespacesOrigin(normalized)) return callback(null, true);
 
-      return callback(new Error("CORS origin denied"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Accept", "X-Requested-With", "X-Idempotency-Key"],
-    exposedHeaders: ["X-Request-Id"],
-    optionsSuccessStatus: 204,
-  }),
-);
+    // Local development.
+    if (!isProduction && (
+      normalized.startsWith("http://localhost:") ||
+      normalized.startsWith("http://127.0.0.1:")
+    )) return callback(null, true);
+
+    return callback(new Error("CORS origin denied"));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Accept", "X-Requested-With", "X-Idempotency-Key"],
+  exposedHeaders: ["X-Request-Id"],
+  optionsSuccessStatus: 204,
+}));
 
 app.use(express.json({
   limit: "100kb",
@@ -167,7 +145,10 @@ const injectVsbilHead = (html: string) => {
 const sendHtmlPage = async (filePath: string, res: express.Response, next: express.NextFunction) => {
   try {
     const html = await readFile(filePath, "utf8");
-    res.status(200).type("html").setHeader("X-Content-Type-Options", "nosniff").setHeader("Cache-Control", isProduction ? "public, max-age=60, must-revalidate" : "no-store").send(injectVsbilHead(html));
+    res.status(200).type("html")
+      .setHeader("X-Content-Type-Options", "nosniff")
+      .setHeader("Cache-Control", isProduction ? "public, max-age=60, must-revalidate" : "no-store")
+      .send(injectVsbilHead(html));
   } catch (error: any) {
     if (error?.code === "ENOENT") return next();
     return next(error);
@@ -181,13 +162,21 @@ app.get(/^\/.*\.html$/, (req, res, next) => {
   if (safePath.startsWith("..") || path.isAbsolute(safePath)) return res.status(400).end();
   return sendHtmlPage(path.join(publicDirectory, safePath), res, next);
 });
-app.use(express.static(publicDirectory, { extensions: ["html"], setHeaders: (res) => res.setHeader("X-Content-Type-Options", "nosniff") }));
+app.use(express.static(publicDirectory, {
+  extensions: ["html"],
+  setHeaders: (res) => res.setHeader("X-Content-Type-Options", "nosniff"),
+}));
 app.all("/api/*splat", (_req, res) => res.status(404).json({ success: false, message: "API endpoint not found", code: "NOT_FOUND" }));
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("Unhandled application error", error);
   if (res.headersSent) return;
   const isCors = error instanceof Error && error.message === "CORS origin denied";
-  res.status(isCors ? 403 : 500).json({ success: false, message: isCors ? "Origin is not allowed" : "Internal server error", code: isCors ? "CORS_DENIED" : "INTERNAL_ERROR", requestId: res.getHeader("X-Request-Id") });
+  res.status(isCors ? 403 : 500).json({
+    success: false,
+    message: isCors ? "Origin is not allowed" : "Internal server error",
+    code: isCors ? "CORS_DENIED" : "INTERNAL_ERROR",
+    requestId: res.getHeader("X-Request-Id"),
+  });
 });
 
 export default app;
