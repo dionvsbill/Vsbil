@@ -1,0 +1,18 @@
+{
+  "name": "VSBIL — Earn. Grow. Connect.",
+  "short_name": "VSBIL",
+  "description": "VSBIL connects creators and communities through verified digital participation, campaigns and rewards.",
+  "lang": "en-GH",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#070a12",
+  "theme_color": "#070a12",
+  "categories": ["business", "social", "finance"],
+  "icons": [
+    {"src": "/assets/vsbil-logo.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable"},
+    {"src": "/assets/vsbil-logo.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable"}
+  ]
+}

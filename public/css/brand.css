@@ -1,0 +1,58 @@
+/* VSBIL Brand System */
+.logo,
+.dashboard-logo,
+.auth-logo {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 118px !important;
+  height: 46px !important;
+  min-width: 118px;
+  min-height: 46px;
+  padding: 0 !important;
+  margin-top: 0;
+  margin-bottom: 0;
+  background: url("/assets/vsbil-logo.svg") center / contain no-repeat !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  letter-spacing: 0 !important;
+  text-indent: -9999px;
+  overflow: hidden;
+  border: 0;
+}
+.auth-logo {
+  width: 170px !important;
+  height: 96px !important;
+  margin: 0 auto 30px !important;
+}
+.dashboard-logo {
+  width: 112px !important;
+  height: 58px !important;
+}
+.footer-brand strong {
+  display: inline-flex;
+  width: 92px;
+  height: 38px;
+  align-items: center;
+  background: url("/assets/vsbil-logo.svg") center / contain no-repeat;
+  color: transparent !important;
+  font-size: 0 !important;
+  text-indent: -9999px;
+  overflow: hidden;
+}
+.legal-page > a[href="/"] {
+  display: inline-flex;
+  width: 118px;
+  height: 46px;
+  align-items: center;
+  background: url("/assets/vsbil-logo.svg") center / contain no-repeat;
+  color: transparent !important;
+  font-size: 0 !important;
+  text-indent: -9999px;
+  overflow: hidden;
+}
+@media (max-width: 760px) {
+  .logo { width: 100px !important; height: 42px !important; min-width: 100px; }
+  .dashboard-logo { width: 96px !important; height: 50px !important; min-width: 96px; }
+}
