@@ -8,6 +8,7 @@ import authRouter from "./routes/auth.js";
 import authAdvancedRouter from "./routes/authAdvanced.js";
 import authProductionRouter from "./routes/authProduction.js";
 import authProductionPatchRouter from "./routes/authProductionPatch.js";
+import oauthRouter from "./routes/oauth.js";
 import paymentRouter from "./routes/payment.js";
 import dashboardRouter from "./routes/dashboard.js";
 import withdrawalRouter from "./routes/withdrawals.js";
@@ -38,6 +39,7 @@ app.use("/api/auth", rateLimit({ windowMs: 60_000, max: 30, key: req => `${req.i
 app.use("/api/auth/advanced", rateLimit({ windowMs: 60_000, max: 12, key: req => `${req.ip}:advanced-auth` }), authAdvancedRouter);
 app.use("/api/auth/production", rateLimit({ windowMs: 60_000, max: 15, key: req => `${req.ip}:production-auth` }), authProductionRouter);
 app.use("/api/auth/production", authProductionPatchRouter);
+app.use("/api/auth", rateLimit({ windowMs: 60_000, max: 20, key: req => `${req.ip}:oauth` }), oauthRouter);
 app.use("/api/payment", rateLimit({ windowMs: 60_000, max: 20, key: req => `${req.ip}:payment` }), paymentRouter);
 app.use("/api/youtube", rateLimit({ windowMs: 60_000, max: 20, key: req => `${req.ip}:youtube` }), youtubeRouter);
 app.use("/api/verification", rateLimit({ windowMs: 60_000, max: 10, key: req => `${req.ip}:verification` }), verificationRouter);
@@ -53,9 +55,8 @@ app.get("/api/health", (_req, res) => res.json({ success: true, service: "VSBIL 
 const publicDirectory = path.resolve(__dirname, "../public");
 const injectVsbilHead = (html: string) => {
   const shell = `\n<link rel="manifest" href="/manifest.webmanifest">\n<link rel="icon" href="/assets/vsbil-logo.svg" type="image/svg+xml">\n<link rel="apple-touch-icon" href="/assets/vsbil-logo.svg">\n<meta name="theme-color" content="#070a12">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">\n<meta name="apple-mobile-web-app-title" content="VSBIL">\n<link rel="stylesheet" href="/css/brand.css">\n<link rel="stylesheet" href="/css/site-shell.css">\n<link rel="stylesheet" href="/css/theme-fixes.css">\n<script src="/js/site-shell.js" defer></script>\n`;
-  const has = (needle: string) => html.includes(needle);
-  const injectedHead = has("/js/site-shell.js") ? "" : shell;
-  const pwa = has("/js/pwa.js") ? "" : `<script src="/js/pwa.js" defer></script>`;
+  const injectedHead = html.includes("/js/site-shell.js") ? "" : shell;
+  const pwa = html.includes("/js/pwa.js") ? "" : `<script src="/js/pwa.js" defer></script>`;
   return html.replace("</head>", `${injectedHead}</head>`).replace("</body>", `${pwa}</body>`);
 };
 const sendHtmlPage = async (filePath: string, res: express.Response, next: express.NextFunction) => {
