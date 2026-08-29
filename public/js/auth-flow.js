@@ -1,12 +1,64 @@
 /* VSBIL AUTH FLOW — shared production client */
 "use strict";
-const VSBIL_AUTH={
- async request(path,body={},options={}){const r=await fetch(path,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json",Accept:"application/json",...(options.headers||{})},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok||!d.success){const e=new Error(d.message||"Something went wrong. Please try again.");e.code=d.code;e.data=d;throw e;}return d;},
- saveSession(s,u){if(!s?.accessToken)return;localStorage.setItem("vsbil_access_token",s.accessToken);if(s.refreshToken)localStorage.setItem("vsbil_refresh_token",s.refreshToken);if(s.expiresAt)localStorage.setItem("vsbil_expires_at",String(s.expiresAt));if(s.expiresIn)localStorage.setItem("vsbil_expires_in",String(s.expiresIn));localStorage.setItem("vsbil_token_type",s.tokenType||"bearer");if(u)localStorage.setItem("vsbil_user",JSON.stringify(u));},
- clearSession(){["vsbil_access_token","vsbil_refresh_token","vsbil_expires_at","vsbil_expires_in","vsbil_token_type","vsbil_user"].forEach(k=>localStorage.removeItem(k));},
- async refresh(){const token=localStorage.getItem("vsbil_refresh_token");if(!token)throw Object.assign(new Error("Your session has expired."),{code:"REFRESH_FAILED"});const d=await this.request("/api/auth/production/refresh",{refreshToken:token});this.saveSession(d.session,d.user);return d;},
- async accessToken(){const expires=Number(localStorage.getItem("vsbil_expires_at")||0)*1000;if(expires&&Date.now()>expires-60000){try{await this.refresh();}catch{this.clearSession();return null;}}return localStorage.getItem("vsbil_access_token");},
- async api(path,options={}){let token=await this.accessToken();if(!token){location.replace("/login.html");throw new Error("Authentication required");}const headers=new Headers(options.headers||{});headers.set("Authorization",`Bearer ${token}`);headers.set("Accept","application/json");let r=await fetch(path,{...options,credentials:"include",headers});if(r.status===401){try{await this.refresh();token=localStorage.getItem("vsbil_access_token");headers.set("Authorization",`Bearer ${token}`);r=await fetch(path,{...options,credentials:"include",headers});}catch{this.clearSession();location.replace("/login.html");throw new Error("Your session has expired.");}}const d=await r.json().catch(()=>({}));if(!r.ok||!d.success){const e=new Error(d.message||"Request failed");e.code=d.code;e.data=d;throw e;}return d;},
- message(el,text,type=""){if(!el)return;el.textContent=text;el.className="form-message"+(type?` ${type}`:"");},
- toggle(input,button){button?.addEventListener("click",()=>{const show=input.type==="password";input.type=show?"text":"password";button.textContent=show?"Hide":"Show";});}
-};window.VSBIL_AUTH=VSBIL_AUTH;
+(function () {
+  const KEYS = ["vsbil_access_token","vsbil_refresh_token","vsbil_expires_at","vsbil_expires_in","vsbil_token_type","vsbil_user"];
+
+  function saveSession(session, user) {
+    if (!session?.accessToken) return false;
+    localStorage.setItem("vsbil_access_token", session.accessToken);
+    if (session.refreshToken) localStorage.setItem("vsbil_refresh_token", session.refreshToken);
+    if (session.expiresAt != null) localStorage.setItem("vsbil_expires_at", String(session.expiresAt));
+    if (session.expiresIn != null) localStorage.setItem("vsbil_expires_in", String(session.expiresIn));
+    localStorage.setItem("vsbil_token_type", session.tokenType || "bearer");
+    if (user) localStorage.setItem("vsbil_user", JSON.stringify(user));
+    return true;
+  }
+
+  function clearSession() { KEYS.forEach((key) => localStorage.removeItem(key)); }
+  function getAccessToken() { return localStorage.getItem("vsbil_access_token")?.trim() || null; }
+  function getRefreshToken() { return localStorage.getItem("vsbil_refresh_token")?.trim() || null; }
+
+  async function request(path, body, options = {}) {
+    const hasBody = body !== undefined;
+    const method = options.method || (hasBody ? "POST" : "GET");
+    const headers = new Headers(options.headers || {});
+    headers.set("Accept", "application/json");
+    if (hasBody) headers.set("Content-Type", "application/json");
+
+    const token = getAccessToken();
+    if (token && path.startsWith("/api/")) headers.set("Authorization", `Bearer ${token}`);
+
+    const response = await fetch(path, {
+      ...options,
+      method,
+      headers,
+      credentials: "same-origin",
+      body: hasBody ? JSON.stringify(body) : options.body
+    });
+
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.success === false) {
+      const error = new Error(data?.message || `Request failed (${response.status})`);
+      error.code = data?.code || (response.status === 401 ? "AUTH_REQUIRED" : "REQUEST_FAILED");
+      error.status = response.status;
+      error.data = data;
+      throw error;
+    }
+    return data;
+  }
+
+  async function api(path, options = {}) {
+    const token = getAccessToken();
+    if (!token) {
+      const error = new Error("Authentication required");
+      error.code = "AUTH_REQUIRED";
+      throw error;
+    }
+    return request(path, undefined, {
+      ...options,
+      headers: { ...(options.headers || {}), Authorization: `Bearer ${token}` }
+    });
+  }
+
+  window.VSBIL_AUTH = Object.freeze({ request, api, saveSession, clearSession, getAccessToken, getRefreshToken });
+})();
