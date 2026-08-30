@@ -1,1 +1,44 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#070a12"><meta name="description" content="Create your VSBIL account."><title>Create Account — VSBIL</title><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/auth.css"></head><body class="auth-page"><main class="auth-container"><a href="/" class="auth-logo" aria-label="VSBIL home">VSBIL</a><section class="auth-card" aria-labelledby="registerTitle"><div class="auth-header"><p class="eyebrow">JOIN VSBIL</p><h1 id="registerTitle">Create your account.</h1><p>Join VSBIL and discover eligible campaigns, rewards and creator opportunities.</p></div><form id="registerForm" novalidate><div class="form-group"><label for="username">Username</label><input id="username" name="username" type="text" placeholder="Choose a username" minlength="3" maxlength="30" autocomplete="username" required></div><div class="form-group"><label for="email">Email address</label><input id="email" name="email" type="email" placeholder="you@example.com" autocomplete="email" required></div><div class="form-group"><label for="password">Password</label><div class="password-wrap"><input id="password" name="password" type="password" placeholder="Create a strong password" minlength="10" maxlength="72" autocomplete="new-password" required><button type="button" class="password-toggle" id="passwordToggle">Show</button></div></div><div class="form-group"><label for="confirmPassword">Confirm password</label><input id="confirmPassword" name="confirmPassword" type="password" placeholder="Enter your password again" minlength="10" maxlength="72" autocomplete="new-password" required></div><div class="form-group"><label for="referralCode">Referral code <span>Optional</span></label><input id="referralCode" name="referralCode" type="text" placeholder="Enter referral code" maxlength="50" autocomplete="off"></div><div id="registerMessage" class="form-message" role="alert" aria-live="polite"></div><button type="submit" class="primary-btn auth-submit" id="registerBtn">Create Account</button><p class="auth-terms">By creating an account, you agree to our <a href="/terms.html">Terms</a> and <a href="/privacy.html">Privacy Policy</a>.</p></form><div class="auth-divider"><span>Already have an account?</span></div><a class="secondary-btn auth-login" href="/login.html">Login</a></section></main><script src="/js/auth-flow.js" defer></script><script src="/js/register.js" defer></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#070a12">
+  <meta name="description" content="Create your VSBIL account.">
+  <title>Create Account — VSBIL</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/auth.css">
+  <style>
+    /* Authentication pages intentionally have no shared site footer. */
+    body.auth-page .site-footer,
+    body.auth-page footer,
+    body.auth-page .global-footer { display:none !important; }
+  </style>
+</head>
+<body class="auth-page auth-no-footer">
+  <main class="auth-container">
+    <a href="/" class="auth-logo" aria-label="VSBIL home">VSBIL</a>
+    <section class="auth-card" aria-labelledby="registerTitle">
+      <div class="auth-header">
+        <p class="eyebrow">JOIN VSBIL</p>
+        <h1 id="registerTitle">Create your account.</h1>
+        <p>Join VSBIL and discover eligible campaigns, rewards and creator opportunities.</p>
+      </div>
+      <form id="registerForm" novalidate>
+        <div class="form-group"><label for="username">Username</label><input id="username" name="username" type="text" placeholder="Choose a username" minlength="3" maxlength="30" autocomplete="username" required></div>
+        <div class="form-group"><label for="email">Email address</label><input id="email" name="email" type="email" placeholder="you@example.com" autocomplete="email" required></div>
+        <div class="form-group"><label for="password">Password</label><div class="password-wrap"><input id="password" name="password" type="password" placeholder="Create a strong password" minlength="10" maxlength="72" autocomplete="new-password" required><button type="button" class="password-toggle" id="passwordToggle">Show</button></div></div>
+        <div class="form-group"><label for="confirmPassword">Confirm password</label><input id="confirmPassword" name="confirmPassword" type="password" placeholder="Enter your password again" minlength="10" maxlength="72" autocomplete="new-password" required></div>
+        <div class="form-group"><label for="referralCode">Referral code <span>Optional</span></label><input id="referralCode" name="referralCode" type="text" placeholder="Enter referral code" maxlength="50" autocomplete="off"></div>
+        <div id="registerMessage" class="form-message" role="alert" aria-live="polite"></div>
+        <button type="submit" class="primary-btn auth-submit" id="registerBtn">Create Account</button>
+        <p class="auth-terms">By creating an account, you agree to our <a href="/terms.html">Terms</a> and <a href="/privacy.html">Privacy Policy</a>.</p>
+      </form>
+      <div class="auth-divider"><span>Already have an account?</span></div>
+      <a class="secondary-btn auth-login" href="/login.html">Login</a>
+    </section>
+  </main>
+  <script src="/js/auth-flow.js" defer></script>
+  <script src="/js/register.js" defer></script>
+</body>
+</html>
