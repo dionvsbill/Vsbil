@@ -1,54 +1,38 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Create and manage VSBIL campaigns.">
-  <title>Creator Hub — VSBIL</title>
-  <link rel="stylesheet" href="/css/style.css">
-  <style>
-    .page{max-width:1120px;margin:auto;padding:36px 20px 70px}.panel{background:var(--surface-solid,#11182a);border:1px solid var(--border,rgba(255,255,255,.09));border-radius:22px;padding:24px;margin:18px 0}.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.field{display:flex;flex-direction:column;gap:7px}.field input,.field select{padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.12);background:#080d17;color:#f8faff}.full{grid-column:1/-1}.hint{font-size:13px;color:var(--muted,#9da8bd)}.msg{min-height:24px;margin-top:12px;color:var(--muted,#9da8bd)}.campaigns{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.campaign{padding:18px;border:1px solid var(--border,rgba(255,255,255,.09));border-radius:18px;background:#0d1422}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:rgba(117,104,255,.14);border:1px solid rgba(117,104,255,.24);font-size:12px;color:#c4bfff}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.btn{border:1px solid transparent;border-radius:10px;padding:11px 15px;cursor:pointer;font-weight:750}.primary{background:linear-gradient(135deg,#7568ff,#5146d9);color:#fff;box-shadow:0 10px 25px rgba(117,104,255,.2)}.secondary{background:rgba(255,255,255,.045);border-color:rgba(255,255,255,.14);color:#f8faff}.btn:hover{transform:translateY(-1px)}.btn:disabled{opacity:.55;cursor:not-allowed;transform:none}@media(max-width:720px){.form-grid,.campaigns{grid-template-columns:1fr}.full{grid-column:auto}}
-  </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Create and manage VSBIL campaigns."><title>Creator Hub — VSBIL</title>
+<link rel="stylesheet" href="/css/style.css">
+<style>
+.page{max-width:1120px;margin:auto;padding:30px 18px 70px}.panel{background:#101827;border:1px solid rgba(255,255,255,.09);border-radius:22px;padding:24px;margin:18px 0}.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}.field{display:flex;flex-direction:column;gap:7px}.field input{padding:13px;border-radius:11px;border:1px solid rgba(255,255,255,.12);background:#080d17;color:#f8faff;box-sizing:border-box;width:100%}.field input:focus{outline:2px solid rgba(117,104,255,.4);border-color:#7568ff}.full{grid-column:1/-1}.hint{font-size:13px;color:#9da8bd}.msg{min-height:24px;margin-top:12px;color:#c3cbda}.msg.error{color:#ffaaa9}.campaigns{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.campaign{padding:18px;border:1px solid rgba(255,255,255,.09);border-radius:18px;background:#0d1422}.campaign h3{margin:0 0 8px}.badge,.action-badge{display:inline-flex;padding:5px 9px;border-radius:999px;background:rgba(117,104,255,.14);border:1px solid rgba(117,104,255,.25);font-size:12px;color:#c9c3ff}.action-badge{background:rgba(55,211,154,.1);border-color:rgba(55,211,154,.2);color:#9debc9;margin-left:5px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.btn{border:1px solid transparent;border-radius:10px;padding:11px 15px;cursor:pointer;font-weight:800}.primary{background:#7568ff;color:#fff;box-shadow:0 8px 20px rgba(117,104,255,.18)}.secondary{background:#182237;border-color:rgba(255,255,255,.13);color:#f8faff}.btn:hover{transform:translateY(-1px)}.btn:disabled{opacity:.55;cursor:not-allowed;transform:none}@media(max-width:720px){.form-grid,.campaigns{grid-template-columns:1fr}.full{grid-column:auto}}
+</style>
 </head>
 <body>
-<main class="page">
-  <a class="secondary-btn" href="/dashboard.html">← Dashboard</a>
-  <section class="panel">
-    <p class="eyebrow">CREATOR HUB</p>
-    <h1>Create a campaign</h1>
-    <p class="hint">Set the video, reward and budget. VSBIL reviews the campaign before it goes live.</p>
-    <form id="campaignForm" novalidate>
-      <div class="form-grid">
-        <div class="field"><label for="title">Campaign title</label><input id="title" maxlength="150" minlength="3" required placeholder="Watch my latest video"><span class="hint">3–150 characters.</span></div>
-        <div class="field"><label for="url">YouTube URL</label><input id="url" type="url" required placeholder="https://www.youtube.com/watch?v=..."></div>
-        <div class="field"><label for="reward">Reward per completed view (GH₵)</label><input id="reward" type="number" min="0.10" max="100" step="0.01" value="1.00" required></div>
-        <div class="field"><label for="budget">Total campaign budget (GH₵)</label><input id="budget" type="number" min="5" max="100000" step="0.01" value="20.00" required><span class="hint">The required amount is reserved when the campaign is created.</span></div>
-        <div class="field"><label for="participants">Maximum participants</label><input id="participants" type="number" min="1" max="1000000" step="1" value="20" required></div>
-        <div class="field"><label for="seconds">Minimum viewing time (seconds)</label><input id="seconds" type="number" min="5" max="3600" step="1" value="30" required></div>
-        <div class="field full"><label for="startsAt">Start time <span class="hint">Optional</span></label><input id="startsAt" type="datetime-local"></div>
-        <div class="field full"><label for="endsAt">End time <span class="hint">Optional</span></label><input id="endsAt" type="datetime-local"></div>
-      </div>
-      <div class="actions"><button class="btn primary" id="submitBtn" type="submit">Submit campaign</button></div>
-      <div class="msg" id="msg" aria-live="polite"></div>
-    </form>
-  </section>
-  <section class="panel">
-    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><p class="eyebrow">MY CAMPAIGNS</p><h2>Campaigns</h2></div><button class="btn secondary" id="refresh" type="button">Refresh</button></div>
-    <div class="campaigns" id="mine"><p class="hint">Loading…</p></div>
-  </section>
-</main>
+<main class="page"><a class="secondary-btn" href="/dashboard.html">← Home</a>
+<section class="panel"><p class="eyebrow">CREATOR HUB</p><h1>Create a campaign</h1><p class="hint">Set the video, reward and budget. Eligible campaigns are reviewed before they become available.</p>
+<form id="campaignForm" novalidate><div class="form-grid">
+<div class="field"><label for="title">Campaign title</label><input id="title" name="title" type="text" maxlength="150" required placeholder="Watch my latest video"><span class="hint">3–150 characters.</span></div>
+<div class="field"><label for="url">YouTube URL</label><input id="url" name="url" type="url" required placeholder="https://www.youtube.com/watch?v=..."></div>
+<div class="field"><label for="reward">Reward per completed view (GH₵)</label><input id="reward" type="number" min="0.10" max="100" step="0.01" value="1.00" required></div>
+<div class="field"><label for="budget">Total campaign budget (GH₵)</label><input id="budget" type="number" min="5" max="100000" step="0.01" value="20.00" required><span class="hint">The required amount is reserved when the campaign is created.</span></div>
+<div class="field"><label for="participants">Maximum participants</label><input id="participants" type="number" min="1" max="1000000" step="1" value="20" required></div>
+<div class="field"><label for="seconds">Minimum viewing time (seconds)</label><input id="seconds" type="number" min="5" max="3600" step="1" value="30" required></div>
+<div class="field full"><label for="startsAt">Start time <span class="hint">Optional</span></label><input id="startsAt" type="datetime-local"></div>
+<div class="field full"><label for="endsAt">End time <span class="hint">Optional</span></label><input id="endsAt" type="datetime-local"></div>
+</div><div class="actions"><button class="btn primary" id="submitBtn" type="submit">Submit campaign</button></div><div class="msg" id="msg" aria-live="polite"></div></form></section>
+<section class="panel"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><div><p class="eyebrow">MY CAMPAIGNS</p><h2>Campaigns</h2></div><button class="btn secondary" id="refresh" type="button">Refresh</button></div><div class="campaigns" id="mine"><p class="hint">Loading…</p></div></section></main>
 <script src="/js/auth-flow.js"></script>
 <script>
 "use strict";
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??"").replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
 const money=v=>`₵${(Number(v||0)/100).toFixed(2)}`;
-const key=()=>`campaign-${crypto.randomUUID()}`;
+const requestKey=()=>`campaign-${crypto.randomUUID()}`;
 async function api(path,opt={}){return VSBIL_AUTH.api(path,opt)}
-async function load(){try{const d=await api('/api/activities/mine');$('mine').innerHTML=(d.activities||[]).map(a=>`<article class="campaign"><h3>${esc(a.title)}</h3><span class="badge">${esc(a.status)}</span><p>Reward: ${money(a.reward_amount)} · Budget: ${money(a.budget_amount)}</p><p>Participants: ${Number(a.completed_count||0)} / ${Number(a.max_participants||0)}</p>${a.review_note?`<p><strong>Review note:</strong> ${esc(a.review_note)}</p>`:""}<div class="actions">${a.status==='active'?`<button class="btn secondary" data-pause="${esc(a.id)}">Pause</button>`:""}${['pending','paused'].includes(a.status)?`<button class="btn secondary" data-archive="${esc(a.id)}">Close</button>`:""}</div></article>`).join('')||'<p class="hint">No campaigns yet.</p>';document.querySelectorAll('[data-pause]').forEach(b=>b.onclick=()=>change(b.dataset.pause,'paused'));document.querySelectorAll('[data-archive]').forEach(b=>b.onclick=()=>change(b.dataset.archive,'archived'));}catch(e){$('mine').textContent=e.message}}
-async function change(id,status){if(!confirm(status==='archived'?'Close this campaign?':'Pause this campaign?'))return;try{await api(`/api/activities/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({status})});await load()}catch(e){alert(e.message)}}
-$('campaignForm').addEventListener('submit',async e=>{e.preventDefault();const title=$('title').value.trim();if(title.length<3||title.length>150){$('msg').textContent='Campaign title must be between 3 and 150 characters.';return}if(!e.target.checkValidity()){e.target.reportValidity();return}$('submitBtn').disabled=true;$('msg').textContent='Submitting campaign…';try{const d=await api('/api/activities',{method:'POST',headers:{'X-Idempotency-Key':key()},body:JSON.stringify({title,url:$('url').value.trim(),action:'watch',rewardGhs:Number($('reward').value),budgetGhs:Number($('budget').value),maxParticipants:Number($('participants').value),minimumSeconds:Number($('seconds').value),startsAt:$('startsAt').value?new Date($('startsAt').value).toISOString():null,endsAt:$('endsAt').value?new Date($('endsAt').value).toISOString():null})});$('msg').textContent=d.message;e.target.reset();await load()}catch(e){$('msg').textContent=e.message}finally{$('submitBtn').disabled=false}});
+function campaignError(e){const code=e?.code||e?.data?.code;const known={INVALID_CAMPAIGN_TITLE:"Use a campaign title between 3 and 150 characters.",BUDGET_BELOW_PARTICIPANTS:"Increase the budget or reduce the maximum participants.",INSUFFICIENT_FUNDS:"Your available balance is not enough to fund this campaign.",WALLET_NOT_FOUND:"Your wallet is not ready yet.",INVALID_SCHEDULE:"Check the campaign start and end times."};return known[code]||e?.message||"Unable to create the campaign."}
+async function load(){try{const d=await api('/api/activities/mine');$('mine').innerHTML=(d.activities||[]).map(a=>`<article class="campaign"><h3>${esc(a.title)}</h3><span class="badge">${esc(a.status)}</span><span class="action-badge">${esc(String(a.action||'watch').toUpperCase())}</span><p class="hint">Reward ${money(a.reward_amount)} · Budget ${money(a.budget_amount)}</p><p class="hint">Participants ${Number(a.completed_count||0)} / ${Number(a.max_participants||0)} · Minimum ${Number(a.minimum_seconds||0)}s</p>${a.review_note?`<p><strong>Review note:</strong> ${esc(a.review_note)}</p>`:""}<div class="actions">${a.status==='active'?`<button class="btn secondary" data-pause="${esc(a.id)}">Pause</button>`:""}${['pending','paused'].includes(a.status)?`<button class="btn secondary" data-archive="${esc(a.id)}">Close</button>`:""}</div></article>`).join('')||'<p class="hint">No campaigns yet.</p>';document.querySelectorAll('[data-pause]').forEach(b=>b.onclick=()=>change(b.dataset.pause,'paused'));document.querySelectorAll('[data-archive]').forEach(b=>b.onclick=()=>change(b.dataset.archive,'archived'))}catch(e){$('mine').innerHTML=`<p class="msg error">${esc(e.message||'Unable to load campaigns.')}</p>`}}
+async function change(id,status){if(!confirm(status==='archived'?'Close this campaign?':'Pause this campaign?'))return;try{await api(`/api/activities/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({status})});await load()}catch(e){alert(campaignError(e))}}
+$('campaignForm').addEventListener('submit',async e=>{e.preventDefault();const title=String($('title').value||'').trim();$('msg').className='msg';if(title.length<3||title.length>150){$('msg').className='msg error';$('msg').textContent=`Your title is ${title.length} characters. It must be between 3 and 150 characters.`;$('title').focus();return}if(!$('url').value.trim()){return}if(!e.target.checkValidity()){e.target.reportValidity();return}$('submitBtn').disabled=true;$('msg').textContent='Submitting…';try{const d=await api('/api/activities',{method:'POST',headers:{'X-Idempotency-Key':requestKey()},body:JSON.stringify({title,url:$('url').value.trim(),platform:'youtube',action:'watch',rewardGhs:Number($('reward').value),budgetGhs:Number($('budget').value),maxParticipants:Number($('participants').value),minimumSeconds:Number($('seconds').value),startsAt:$('startsAt').value?new Date($('startsAt').value).toISOString():null,endsAt:$('endsAt').value?new Date($('endsAt').value).toISOString():null})});$('msg').textContent=d.message||'Campaign submitted.';e.target.reset();await load()}catch(e){$('msg').className='msg error';$('msg').textContent=campaignError(e)}finally{$('submitBtn').disabled=false}});
 $('refresh').onclick=load;load();
-</script>
-</body>
-</html>
+</script></body></html>
