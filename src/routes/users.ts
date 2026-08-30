@@ -1,9 +1,13 @@
 import { Router, type Request, type Response } from "express";
+import crypto from "node:crypto";
 import { supabase } from "../config/supabase.js";
 import { requireAuth } from "../middleware/authMiddleware.js";
 
 const router = Router();
 router.use(requireAuth);
+const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
+const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const cleanText = (value: unknown, max: number) => typeof value === "string" ? value.trim().slice(0, max) : "";
 
 router.get("/referrals", async (req, res) => {
   const [{ data: user, error: userError }, { data: rows, error: referralError }] = await Promise.all([
@@ -15,30 +19,51 @@ router.get("/referrals", async (req, res) => {
 });
 
 router.get("/profile", async (req, res) => {
-  const { data, error } = await supabase
-    .from("users")
-    .select("id,email,username,role,status,referral_code,created_at,updated_at,email_verified_at,google_verified_at,phone_verified_at,last_login_at,last_active_at,suspended_at,suspension_reason")
-    .eq("id", req.user!.id)
-    .single();
+  const { data, error } = await supabase.from("users").select("id,email,username,role,status,referral_code,bio,avatar_url,cover_url,account_visibility,discoverable,created_at,updated_at,email_verified_at,google_verified_at,phone_verified_at,last_login_at,last_active_at,suspended_at,suspension_reason").eq("id", req.user!.id).single();
   if (error) return res.status(500).json({ success: false, message: "Unable to load profile" });
   return res.json({ success: true, user: data });
 });
 
 router.patch("/profile", async (req: Request, res: Response) => {
   const username = String(req.body?.username ?? "").trim();
-  if (!/^[A-Za-z0-9_.-]{3,30}$/.test(username)) return res.status(400).json({ success: false, message: "Username must be 3–30 characters and use letters, numbers, dot, dash or underscore." });
-  const { data, error } = await supabase
-    .from("users")
-    .update({ username, updated_at: new Date().toISOString() })
-    .eq("id", req.user!.id)
-    .select("id,email,username,role,status,referral_code,created_at,updated_at,email_verified_at,google_verified_at,phone_verified_at")
-    .single();
+  if (!/^[A-Za-z0-9_.-]{3,30}$/.test(username)) return res.status(400).json({ success: false, message: "Choose a username between 3 and 30 characters." });
+  const patch: Record<string, unknown> = { username, updated_at: new Date().toISOString() };
+  if (req.body?.bio !== undefined) patch.bio = cleanText(req.body.bio, 300);
+  if (["public", "private"].includes(req.body?.accountVisibility)) patch.account_visibility = req.body.accountVisibility;
+  if (req.body?.discoverable !== undefined) patch.discoverable = Boolean(req.body.discoverable);
+  const { data, error } = await supabase.from("users").update(patch).eq("id", req.user!.id).select("id,email,username,role,status,referral_code,bio,avatar_url,cover_url,account_visibility,discoverable,created_at,updated_at,email_verified_at,google_verified_at,phone_verified_at").single();
   if (error) {
     const duplicate = error.code === "23505" || error.message.toLowerCase().includes("unique");
     return res.status(400).json({ success: false, message: duplicate ? "That username is already in use." : "Unable to update profile." });
   }
-  await supabase.from("security_events").insert({ user_id: req.user!.id, event_type: "profile_updated", severity: "info", metadata: { fields: ["username"] } });
+  await supabase.from("security_events").insert({ user_id: req.user!.id, event_type: "profile_updated", severity: "info", metadata: { fields: Object.keys(patch).filter(k => k !== "updated_at") } });
   return res.json({ success: true, user: data });
+});
+
+router.post("/profile/media", async (req: Request, res: Response) => {
+  try {
+    const dataUrl = cleanText(req.body?.dataUrl, 10 * 1024 * 1024);
+    const mediaType = cleanText(req.body?.mediaType, 30).toLowerCase();
+    const field = req.body?.field === "cover" ? "cover_url" : "avatar_url";
+    if (!dataUrl.startsWith("data:") || !IMAGE_TYPES.has(mediaType)) return res.status(400).json({ success: false, message: "Choose a supported image file." });
+    const match = dataUrl.match(/^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=]+)$/i);
+    if (!match) return res.status(400).json({ success: false, message: "The selected image could not be read." });
+    const contentType = match[1].toLowerCase();
+    const buffer = Buffer.from(match[2], "base64");
+    if (!buffer.length || buffer.length > MAX_IMAGE_BYTES) return res.status(400).json({ success: false, message: "Image must be smaller than 6 MB." });
+    const ext = contentType.split("/")[1].replace("jpeg", "jpg");
+    const objectPath = `${req.user!.id}/${field.replace("_url", "")}-${crypto.randomUUID()}.${ext}`;
+    const upload = await supabase.storage.from("user-media").upload(objectPath, buffer, { contentType, upsert: false, cacheControl: "3600" });
+    if (upload.error) { console.error("profile media upload", upload.error); return res.status(503).json({ success: false, message: "Unable to upload the image right now." }); }
+    const { data: publicData } = supabase.storage.from("user-media").getPublicUrl(objectPath);
+    const { data, error } = await supabase.from("users").update({ [field]: publicData.publicUrl, updated_at: new Date().toISOString() }).eq("id", req.user!.id).select("id,username,bio,avatar_url,cover_url").single();
+    if (error) return res.status(500).json({ success: false, message: "Image uploaded but profile could not be updated." });
+    await supabase.from("security_events").insert({ user_id: req.user!.id, event_type: "profile_media_updated", severity: "info", metadata: { field, objectPath } });
+    return res.status(201).json({ success: true, user: data, url: publicData.publicUrl });
+  } catch (error) {
+    console.error("profile media", error);
+    return res.status(500).json({ success: false, message: "Unable to update profile media." });
+  }
 });
 
 export default router;
