@@ -117,12 +117,12 @@ router.post("/flows", requireAuth, async (req, res) => {
 router.put("/flows/:id", requireAuth, async (req, res) => {
   try {
     const bot = await getBotForUser(req.user!.id);
-    const id = clean(req.params.id, 80);
+    const flowId = clean(req.params.id, 80);
     const keyword = clean(req.body?.keyword, 100).toLowerCase();
     const replyText = clean(req.body?.replyText, MAX_REPLY_LENGTH);
     const isActive = Boolean(req.body?.isActive);
-    if (!bot || !id || !keyword || !replyText) return res.status(400).json({ success: false, message: "Invalid auto-reply details" });
-    const { data, error } = await supabase.from("whatsapp_bot_flows").update({ keyword, reply_text: replyText, is_active: isActive, updated_at: new Date().toISOString() }).eq("id", id).eq("bot_id", bot.id).select("id,keyword,reply_text,is_active,created_at,updated_at").maybeSingle();
+    if (!bot || !flowId || !keyword || !replyText) return res.status(400).json({ success: false, message: "Invalid auto-reply details" });
+    const { data, error } = await supabase.from("whatsapp_bot_flows").update({ keyword, reply_text: replyText, is_active: isActive, updated_at: new Date().toISOString() }).eq("id", flowId).eq("bot_id", bot.id).select("id,keyword,reply_text,is_active,created_at,updated_at").maybeSingle();
     if (error) return res.status(500).json({ success: false, message: "Unable to update auto-reply" });
     if (!data) return res.status(404).json({ success: false, message: "Auto-reply not found" });
     return res.json({ success: true, flow: data });
@@ -135,9 +135,9 @@ router.put("/flows/:id", requireAuth, async (req, res) => {
 router.delete("/flows/:id", requireAuth, async (req, res) => {
   try {
     const bot = await getBotForUser(req.user!.id);
-    const id = clean(req.params.id, 80);
+    const flowId = clean(req.params.id, 80);
     if (!bot) return res.status(404).json({ success: false, message: "Bot not found" });
-    const { error } = await supabase.from("whatsapp_bot_flows").delete().eq("id", id).eq("bot_id", bot.id);
+    const { error } = await supabase.from("whatsapp_bot_flows").delete().eq("id", flowId).eq("bot_id", bot.id);
     if (error) throw error;
     return res.json({ success: true });
   } catch (error) {
@@ -161,25 +161,56 @@ router.get("/messages", requireAuth, async (req, res) => {
 });
 
 router.post("/subscription/initialize", requireAuth, async (req, res) => {
+  let paymentReference = "";
   try {
     const bot = await getBotForUser(req.user!.id);
-    if (!bot) return res.status(400).json({ success: false, message: "Connect your WhatsApp number before subscribing" });
+    if (!bot || bot.status !== "connected") return res.status(400).json({ success: false, code: "WHATSAPP_NOT_CONNECTED", message: "Connect your WhatsApp number before subscribing." });
+
     const plan = clean(req.body?.plan, 20).toLowerCase();
     const amountGhs = PLAN_GHS[plan];
-    if (!amountGhs) return res.status(400).json({ success: false, message: "Invalid WhatsApp plan" });
+    if (!amountGhs) return res.status(400).json({ success: false, code: "INVALID_WHATSAPP_PLAN", message: "Choose a valid WhatsApp plan." });
+
     const secret = process.env.PAYSTACK_SECRET_KEY?.trim();
-    const appUrl = process.env.APP_URL?.trim();
-    if (!secret || !appUrl) return res.status(503).json({ success: false, message: "Subscription payment is not configured" });
-    const reference = `VSBIL-WA-${Date.now()}-${crypto.randomBytes(6).toString("hex").toUpperCase()}`;
-    const { error: paymentError } = await supabase.from("whatsapp_subscription_payments").insert({ user_id: req.user!.id, bot_id: bot.id, reference, plan, amount_ghs: amountGhs, status: "pending" });
-    if (paymentError) throw paymentError;
-    const response = await fetch("https://api.paystack.co/transaction/initialize", { method: "POST", headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" }, body: JSON.stringify({ email: req.user!.email, amount: amountGhs * 100, currency: "GHS", reference, callback_url: `${appUrl}/whatsapp-bot.html?payment=verify&reference=${encodeURIComponent(reference)}`, metadata: { user_id: req.user!.id, bot_id: bot.id, purpose: "whatsapp_subscription", plan } }) });
+    const configuredAppUrl = (process.env.APP_URL || process.env.PAYSTACK_CALLBACK_URL || "").trim().replace(/\/+$/, "");
+    const email = String(req.user!.email ?? "").trim();
+    if (!secret) return res.status(503).json({ success: false, code: "PAYSTACK_NOT_CONFIGURED", message: "Payment service is not configured on the server." });
+    if (!configuredAppUrl) return res.status(503).json({ success: false, code: "APP_URL_NOT_CONFIGURED", message: "VSBIL payment callback URL is not configured on the server." });
+    if (!email) return res.status(400).json({ success: false, code: "ACCOUNT_EMAIL_REQUIRED", message: "Your account needs a verified email before starting a subscription." });
+
+    paymentReference = `VSBIL-WA-${Date.now()}-${crypto.randomBytes(6).toString("hex").toUpperCase()}`;
+    const { error: paymentError } = await supabase.from("whatsapp_subscription_payments").insert({ user_id: req.user!.id, bot_id: bot.id, reference: paymentReference, plan, amount_ghs: amountGhs, status: "pending" });
+    if (paymentError) {
+      console.error("WhatsApp subscription payment record", paymentError);
+      return res.status(503).json({ success: false, code: "WHATSAPP_PAYMENT_STORAGE_ERROR", message: "VSBIL could not create the subscription payment record. Check the WhatsApp payment database migration." });
+    }
+
+    const callbackUrl = `${configuredAppUrl}/whatsapp-bot.html?payment=verify&reference=${encodeURIComponent(paymentReference)}`;
+    const response = await fetch("https://api.paystack.co/transaction/initialize", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        amount: amountGhs * 100,
+        currency: "GHS",
+        reference: paymentReference,
+        callback_url: callbackUrl,
+        metadata: { user_id: req.user!.id, bot_id: bot.id, purpose: "whatsapp_subscription", plan },
+      }),
+    });
     const data: any = await response.json().catch(() => null);
-    if (!response.ok || !data?.status || !data.data?.authorization_url) return res.status(502).json({ success: false, message: "Unable to initialize subscription payment" });
-    return res.json({ success: true, authorization_url: data.data.authorization_url, reference, plan, amountGhs });
+
+    if (!response.ok || !data?.status || !data.data?.authorization_url) {
+      await supabase.from("whatsapp_subscription_payments").update({ status: "failed", updated_at: new Date().toISOString() }).eq("reference", paymentReference).eq("user_id", req.user!.id);
+      const providerMessage = clean(data?.message, 220);
+      console.error("Paystack WhatsApp initialize failed", { status: response.status, message: providerMessage, reference: paymentReference });
+      return res.status(502).json({ success: false, code: "PAYSTACK_INITIALIZE_FAILED", message: providerMessage ? `Payment provider: ${providerMessage}` : "The payment provider could not start checkout. Please try again." });
+    }
+
+    return res.json({ success: true, authorization_url: data.data.authorization_url, reference: paymentReference, plan, amountGhs });
   } catch (error) {
+    if (paymentReference) await supabase.from("whatsapp_subscription_payments").update({ status: "failed", updated_at: new Date().toISOString() }).eq("reference", paymentReference).eq("user_id", req.user!.id);
     console.error("WhatsApp subscription initialize", error);
-    return res.status(500).json({ success: false, message: "Unable to initialize subscription" });
+    return res.status(500).json({ success: false, code: "WHATSAPP_SUBSCRIPTION_ERROR", message: "VSBIL could not start the subscription. Please try again." });
   }
 });
 
@@ -192,11 +223,13 @@ router.get("/subscription/verify", requireAuth, async (req, res) => {
     const { data: payment } = await supabase.from("whatsapp_subscription_payments").select("id,user_id,bot_id,reference,plan,amount_ghs,status").eq("reference", reference).eq("user_id", req.user!.id).maybeSingle();
     if (!payment) return res.status(404).json({ success: false, message: "Subscription payment not found" });
     if (payment.status === "success") return res.json({ success: true, alreadyProcessed: true });
+
     const response = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, { headers: { Authorization: `Bearer ${secret}` } });
     const data: any = await response.json().catch(() => null);
     const tx = data?.data;
     if (!response.ok || !data?.status || !tx || tx.status !== "success") return res.status(400).json({ success: false, message: "Payment has not been completed" });
     if (Number(tx.amount) !== Number(payment.amount_ghs) * 100 || String(tx.currency).toUpperCase() !== "GHS" || tx.reference !== payment.reference || tx.metadata?.user_id !== payment.user_id || tx.metadata?.bot_id !== payment.bot_id) return res.status(400).json({ success: false, message: "Payment verification mismatch" });
+
     const start = new Date();
     const current = await getActiveSubscription(payment.bot_id);
     const base = current && subscriptionActive(current) ? new Date(current.current_period_end) : start;
@@ -212,7 +245,6 @@ router.get("/subscription/verify", requireAuth, async (req, res) => {
   }
 });
 
-/* Meta webhook verification uses one application-level verify token. */
 router.get("/webhook", async (req, res) => {
   const mode = clean(req.query["hub.mode"], 50);
   const verifyToken = clean(req.query["hub.verify_token"], 4096);
@@ -232,7 +264,6 @@ function validMetaSignature(req: Request): boolean {
 
 router.post("/webhook", async (req, res) => {
   if (!validMetaSignature(req)) return res.sendStatus(401);
-  // Acknowledge quickly; Meta retries when it doesn't receive a 2xx response.
   res.sendStatus(200);
   try {
     const entries = Array.isArray(req.body?.entry) ? req.body.entry : [];
@@ -266,7 +297,7 @@ router.post("/webhook", async (req, res) => {
             await supabase.from("whatsapp_messages").insert({ bot_id: bot.id, wa_message_id: waMessageId, sender_phone: sender, incoming_text: incoming, status: "no_match" });
             continue;
           }
-          let outgoing = String(match.reply_text).slice(0, MAX_REPLY_LENGTH);
+          const outgoing = String(match.reply_text).slice(0, MAX_REPLY_LENGTH);
           let status = "sent";
           let errorMessage: string | null = null;
           try {
@@ -274,7 +305,10 @@ router.post("/webhook", async (req, res) => {
             const sendResponse = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/${encodeURIComponent(phoneNumberId)}/messages`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: sender, type: "text", text: { preview_url: false, body: outgoing } }) });
             const sendData: any = await sendResponse.json().catch(() => null);
             if (!sendResponse.ok) { status = "failed"; errorMessage = sendData?.error?.message || "Meta message delivery failed"; }
-          } catch (error) { status = "failed"; errorMessage = error instanceof Error ? error.message : "Unable to send message"; }
+          } catch (error) {
+            status = "failed";
+            errorMessage = error instanceof Error ? error.message : "Unable to send message";
+          }
           await supabase.from("whatsapp_messages").insert({ bot_id: bot.id, wa_message_id: waMessageId, sender_phone: sender, incoming_text: incoming, matched_keyword: match.keyword, outgoing_text: status === "sent" ? outgoing : null, status, error_message: errorMessage });
         }
       }
