@@ -1,0 +1,8 @@
+import { Router } from "express";
+import { supabase } from "../config/supabase.js";
+import { requireIdentity } from "../middleware/authMiddleware.js";
+const router=Router();
+router.get("/program",requireIdentity,async(req,res)=>{const {data}=await supabase.from("creator_program_enrollments").select("status,accepted_terms_at,originality_required,quality_required").eq("user_id",req.user!.id).maybeSingle();return res.json({success:true,joined:Boolean(data&&data.status==='active'),program:data??null,activationRequired:true});});
+router.post("/program/join",requireIdentity,async(req,res)=>{if(req.body?.acceptTerms!==true)return res.status(400).json({success:false,message:"You must accept the creator program terms"});const {data,error}=await supabase.from("creator_program_enrollments").upsert({user_id:req.user!.id,status:"active",accepted_terms_at:new Date().toISOString()},{onConflict:"user_id"}).select("status,accepted_terms_at,originality_required,quality_required").single();if(error)return res.status(500).json({success:false,message:"Unable to join creator program"});const {error:ue}=await supabase.from("users").update({content_participant:true}).eq("id",req.user!.id);if(ue)return res.status(500).json({success:false,message:"Unable to activate creator participation"});return res.json({success:true,program:data,message:"Creator participation enabled"});});
+router.post("/program/leave",requireIdentity,async(req,res)=>{await supabase.from("creator_program_enrollments").update({status:"left",updated_at:new Date().toISOString()}).eq("user_id",req.user!.id);await supabase.from("users").update({content_participant:false}).eq("id",req.user!.id);return res.json({success:true,message:"Creator participation disabled"});});
+export default router;
