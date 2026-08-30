@@ -34,12 +34,23 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const nodeEnv = process.env.NODE_ENV?.trim().toLowerCase() || "development";
 const isProduction = nodeEnv === "production";
+
+const normalizeOrigin = (value: string) => value.trim().replace(/\/+$/, "").toLowerCase();
+
 const configuredOrigins = new Set(
   (process.env.APP_URL ?? "")
     .split(",")
-    .map((v) => v.trim().replace(/\/$/, ""))
+    .map(normalizeOrigin)
     .filter(Boolean),
 );
+
+// Render currently serves the VSBIL web app and API from the same origin.
+// Keep the production allow-list explicit instead of using `*`, because the
+// application uses authenticated requests with credentials.
+const productionOrigins = new Set([
+  "https://vsbil.onrender.com",
+  ...configuredOrigins,
+]);
 
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
@@ -55,9 +66,15 @@ app.use(
 app.use(
   cors({
     origin: (origin, cb) => {
-      if (!origin || !isProduction) return cb(null, true);
-      const normalized = origin.replace(/\/$/, "");
-      return configuredOrigins.has(normalized)
+      // Requests without an Origin header include same-origin server calls,
+      // health checks and some non-browser clients. They do not need CORS.
+      if (!origin) return cb(null, true);
+
+      const normalized = normalizeOrigin(origin);
+
+      if (!isProduction) return cb(null, true);
+
+      return productionOrigins.has(normalized)
         ? cb(null, true)
         : cb(new Error("CORS origin denied"));
     },
