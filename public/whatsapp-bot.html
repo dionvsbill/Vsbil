@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Connect your WhatsApp Business number and manage secure automatic replies with VSBIL.">
+<title>WhatsApp Bot — VSBIL</title>
+<link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/site-shell.css"><link rel="stylesheet" href="/css/whatsapp-bot.css">
+</head>
+<body class="whatsapp-page">
+<main class="wa-shell">
+<header class="wa-header"><a href="/dashboard.html" class="wa-brand"><img src="/assets/vsbil-logo.svg" alt="VSBIL"><span>WhatsApp Bot</span></a><a href="/dashboard.html" class="wa-back">Dashboard</a></header>
+<section class="wa-hero"><div><p class="eyebrow">VSBIL BUSINESS AUTOMATION</p><h1>Turn your WhatsApp Business number into an automated assistant.</h1><p>Connect your own Meta WhatsApp Business number, create keyword replies and let VSBIL respond while your phone is offline.</p></div><div class="wa-status-card"><span class="status-dot" id="connectionDot"></span><strong id="connectionStatus">Checking connection…</strong><small id="subscriptionStatus">Checking subscription…</small></div></section>
+<div id="notice" class="notice" role="status" aria-live="polite"></div>
+<section class="wa-grid">
+<article class="wa-card" id="connectCard"><div class="card-heading"><div><p class="eyebrow">1 · CONNECT</p><h2>Your WhatsApp Business number</h2></div><span class="badge">Secure</span></div><p class="muted">Enter the Phone Number ID and permanent access token from your Meta Business account. The token is encrypted on the server and is never displayed after saving.</p>
+<form id="connectForm"><label>Phone Number ID<input id="phoneNumberId" name="phoneNumberId" required inputmode="numeric" autocomplete="off" placeholder="123456789012345"></label><label>Permanent Access Token<input id="accessToken" name="accessToken" required type="password" autocomplete="new-password" placeholder="Paste your Meta access token"></label><label>Business name <span>(optional)</span><input id="businessName" name="businessName" maxlength="120" placeholder="My Business"></label><label>Display phone number <span>(optional)</span><input id="displayPhoneNumber" name="displayPhoneNumber" maxlength="40" placeholder="+233…"></label><button class="primary" type="submit" id="connectBtn">Connect WhatsApp</button></form><button class="danger-link" id="disconnectBtn" hidden>Disconnect this number</button></article>
+<article class="wa-card"><div class="card-heading"><div><p class="eyebrow">2 · PLAN</p><h2>Automation subscription</h2></div></div><p class="muted">Choose the monthly plan for your bot. Automated replies are processed only while the subscription is active.</p><div class="plans"><button class="plan" data-plan="starter"><strong>Starter</strong><b>GH₵150</b><small>Essential keyword automation</small></button><button class="plan" data-plan="business"><strong>Business</strong><b>GH₵250</b><small>Growing customer support</small></button><button class="plan" data-plan="pro"><strong>Pro</strong><b>GH₵350</b><small>Higher-volume automation</small></button></div><p id="periodEnd" class="small"></p></article>
+<article class="wa-card wa-card-wide"><div class="card-heading"><div><p class="eyebrow">3 · AUTOMATIONS</p><h2>Keyword auto-replies</h2></div></div><form id="flowForm" class="flow-form"><input id="keyword" maxlength="100" required placeholder="Keyword e.g. price"><textarea id="replyText" maxlength="4096" required placeholder="Reply sent when the keyword is detected…"></textarea><button class="primary" type="submit">Add auto-reply</button></form><div id="flows" class="flow-list"><p class="muted">Loading auto-replies…</p></div></article>
+<article class="wa-card wa-card-wide"><div class="card-heading"><div><p class="eyebrow">4 · INBOX LOG</p><h2>Recent bot messages</h2></div><button class="ghost" id="refreshMessages">Refresh</button></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>From</th><th>Incoming</th><th>Match</th><th>Status</th></tr></thead><tbody id="messages"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody></table></div></article>
+</section>
+<section class="setup-card"><h2>Meta webhook setup</h2><p>Set your Meta webhook callback URL to <code>/api/whatsapp/webhook</code> on your public VSBIL domain. Use the same application webhook verification token configured in your server environment and subscribe to the <code>messages</code> field.</p><p class="muted">VSBIL validates Meta's webhook signature, identifies the correct Phone Number ID, checks the owner's subscription and only then sends the configured reply.</p></section>
+<footer class="wa-footer"><img src="/assets/vsbil-logo.svg" alt="VSBIL"><div><a href="/terms.html">Terms</a><a href="/privacy.html">Privacy</a><a href="/acceptable-use.html">Acceptable Use</a><a href="/support.html">Support</a></div><span>© 2026 VSBIL. All rights reserved.</span></footer>
+</main>
+<script src="/js/auth-flow.js"></script><script src="/js/site-shell.js" defer></script><script src="/js/whatsapp-bot.js" defer></script>
+</body></html>
