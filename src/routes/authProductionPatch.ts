@@ -11,7 +11,6 @@ function authConfig() {
   if (!url || !key) throw new Error("AUTH_CONFIG_MISSING");
   return { url, key };
 }
-
 async function passwordSession(email: string, password: string) {
   const { url, key } = authConfig();
   const response = await fetch(`${url}/auth/v1/token?grant_type=password`, { method: "POST", headers: { "Content-Type": "application/json", apikey: key }, body: JSON.stringify({ email, password }) });
@@ -19,7 +18,6 @@ async function passwordSession(email: string, password: string) {
   if (!response.ok || !data?.access_token) return null;
   return { accessToken: String(data.access_token), refreshToken: data.refresh_token ? String(data.refresh_token) : null, expiresIn: data.expires_in, expiresAt: data.expires_at, tokenType: data.token_type ?? "bearer" };
 }
-
 async function refreshSession(refreshToken: string) {
   const { url, key } = authConfig();
   const response = await fetch(`${url}/auth/v1/token?grant_type=refresh_token`, { method: "POST", headers: { "Content-Type": "application/json", apikey: key }, body: JSON.stringify({ refresh_token: refreshToken }) });
@@ -27,9 +25,14 @@ async function refreshSession(refreshToken: string) {
   if (!response.ok || !data?.access_token) return null;
   return { accessToken: String(data.access_token), refreshToken: data.refresh_token ? String(data.refresh_token) : refreshToken, expiresIn: data.expires_in, expiresAt: data.expires_at, tokenType: data.token_type ?? "bearer" };
 }
-
 function publicUser(user: any) {
-  return { id: user.id, email: user.email, username: user.username, role: user.role, status: user.status, referralCode: user.referral_code, emailVerifiedAt: user.email_verified_at ?? null };
+  return { id: user.id, email: user.email, username: user.username, role: user.role, status: user.status, referralCode: user.referral_code, emailVerifiedAt: user.email_verified_at ?? null, accountVisibility: user.account_visibility ?? "public", discoverable: user.discoverable ?? true };
+}
+function bearer(req: Request): string | null {
+  const header = String(req.headers.authorization ?? "");
+  if (!header.toLowerCase().startsWith("bearer ")) return null;
+  const value = header.slice(7).trim();
+  return value || null;
 }
 
 router.post("/login", async (req: Request, res: Response) => {
@@ -41,7 +44,7 @@ router.post("/login", async (req: Request, res: Response) => {
     if (!session) return res.status(401).json({ success: false, message: "Invalid email or password.", code: "INVALID_CREDENTIALS" });
     const { data: auth, error: authError } = await supabase.auth.getUser(session.accessToken);
     if (authError || !auth.user) return res.status(401).json({ success: false, message: "Your authentication session is invalid.", code: "INVALID_TOKEN" });
-    const { data: user, error } = await supabase.from("users").select("id,email,username,role,status,referral_code,email_verified_at").eq("id", auth.user.id).maybeSingle();
+    const { data: user, error } = await supabase.from("users").select("id,email,username,role,status,referral_code,email_verified_at,account_visibility,discoverable").eq("id", auth.user.id).maybeSingle();
     if (error || !user) return res.status(403).json({ success: false, message: "Your VSBIL profile could not be found.", code: "PROFILE_NOT_FOUND" });
     if (String(user.email).toLowerCase() !== String(auth.user.email ?? "").toLowerCase()) return res.status(403).json({ success: false, message: "Your account authentication does not match your VSBIL profile.", code: "EMAIL_MISMATCH" });
     if (!user.email_verified_at) return res.status(403).json({ success: false, message: "Verify your email before signing in.", code: "EMAIL_NOT_VERIFIED", user: publicUser(user) });
@@ -56,6 +59,23 @@ router.post("/login", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/me", async (req: Request, res: Response) => {
+  try {
+    const accessToken = bearer(req);
+    if (!accessToken) return res.status(401).json({ success: false, message: "Please sign in again.", code: "AUTH_REQUIRED" });
+    const { data: auth, error: authError } = await supabase.auth.getUser(accessToken);
+    if (authError || !auth.user) return res.status(401).json({ success: false, message: "Your login session has expired.", code: "INVALID_TOKEN" });
+    const { data: user, error } = await supabase.from("users").select("id,email,username,role,status,referral_code,email_verified_at,account_visibility,discoverable").eq("id", auth.user.id).maybeSingle();
+    if (error || !user) return res.status(404).json({ success: false, message: "Your profile could not be found.", code: "PROFILE_NOT_FOUND" });
+    if (["suspended", "banned", "disabled"].includes(String(user.status).toLowerCase())) return res.status(403).json({ success: false, message: "Your account is currently restricted.", code: "ACCOUNT_RESTRICTED" });
+    await supabase.from("users").update({ last_active_at: new Date().toISOString() }).eq("id", user.id);
+    return res.json({ success: true, user: publicUser(user) });
+  } catch (error) {
+    console.error("authenticated profile", error);
+    return res.status(503).json({ success: false, message: "Unable to verify your session right now.", code: "AUTH_SERVICE_UNAVAILABLE" });
+  }
+});
+
 router.post("/refresh", async (req: Request, res: Response) => {
   try {
     const token = String(req.body?.refreshToken ?? "").trim();
@@ -64,7 +84,7 @@ router.post("/refresh", async (req: Request, res: Response) => {
     if (!session) return res.status(401).json({ success: false, message: "Your session has expired. Please sign in again.", code: "REFRESH_FAILED" });
     const { data: auth } = await supabase.auth.getUser(session.accessToken);
     if (!auth.user) return res.status(401).json({ success: false, message: "Your refreshed session is invalid.", code: "INVALID_TOKEN" });
-    const { data: user } = await supabase.from("users").select("id,email,username,role,status,referral_code,email_verified_at").eq("id", auth.user.id).maybeSingle();
+    const { data: user } = await supabase.from("users").select("id,email,username,role,status,referral_code,email_verified_at,account_visibility,discoverable").eq("id", auth.user.id).maybeSingle();
     if (!user) return res.status(404).json({ success: false, message: "VSBIL profile not found.", code: "PROFILE_NOT_FOUND" });
     if (["suspended", "banned", "disabled"].includes(String(user.status).toLowerCase())) return res.status(403).json({ success: false, message: "Your account is currently restricted.", code: "ACCOUNT_RESTRICTED" });
     return res.json({ success: true, session, user: publicUser(user) });
