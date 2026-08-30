@@ -1,22 +1,2 @@
 "use strict";
-(async()=>{
-  const money=v=>`₵${(Number(v||0)/100).toFixed(2)}`;
-  const esc=v=>String(v??"").replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
-  try{
-    const d=await VSBIL_AUTH.api("/api/dashboard");
-    const w=d.wallet||{};
-    const available=document.getElementById("availableBalance"),pending=document.getElementById("pendingBalance"),total=document.getElementById("totalEarned"),today=document.getElementById("todayEarnings"),refEarn=document.getElementById("referralEarnings");
-    if(available)available.textContent=(Number(w.available||0)/100).toFixed(2);
-    if(pending)pending.textContent=money(w.pending);
-    if(total)total.textContent=money(w.totalEarned);
-    if(today)today.textContent=money(d.activity?.todayEarnings);
-    if(refEarn)refEarn.textContent=money(d.referrals?.earnings);
-    const box=document.getElementById("dashboardCampaigns");
-    if(box){const c=await VSBIL_AUTH.api("/api/activities");box.innerHTML=(c.activities||[]).slice(0,6).map(a=>`<article class="dashboard-campaign-card"><h3>${esc(a.title)}</h3><p>${esc(a.action)} · ${money(a.reward_amount)} · ${Number(a.minimum_seconds||30)}s minimum</p><a class="secondary-btn" href="/activities.html">Complete activity →</a></article>`).join("")||'<p class="muted">No active campaigns are available right now.</p>';}
-    const withdraw=document.getElementById("withdrawBtn");
-    if(withdraw){const clone=withdraw.cloneNode(true);withdraw.replaceWith(clone);clone.addEventListener("click",()=>location.href="/wallet.html#withdraw");}
-    const notices=document.querySelector(".notification-empty");
-    const items=d.notifications||[];
-    if(notices&&items.length){notices.innerHTML=items.slice(0,8).map(n=>`<div class="notification-item"><strong>${esc(n.title)}</strong><p>${esc(n.message)}</p><small>${new Date(n.created_at).toLocaleString()}</small></div>`).join("");}
-  }catch(error){console.warn("Dashboard enhancement failed",error);}
-})();
+(async()=>{const money=v=>`₵${(Number(v||0)/100).toFixed(2)}`,esc=v=>String(v??"").replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));try{const d=await VSBIL_AUTH.api("/api/dashboard"),w=d.wallet||{};const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};set("availableBalance",(Number(w.available||0)/100).toFixed(2));set("pendingBalance",money(w.pending));set("totalEarned",money(w.totalEarned));set("todayEarnings",money(d.activity?.todayEarnings));set("referralEarnings",money(d.referrals?.earnings));const box=document.getElementById("dashboardCampaigns");if(box){const c=await VSBIL_AUTH.api("/api/activities");box.innerHTML=(c.activities||[]).slice(0,6).map(a=>`<article class="dashboard-campaign-card"><h3>${esc(a.title)}</h3><p>${esc(a.action)} · ${money(a.reward_amount)} · ${Number(a.minimum_seconds||30)}s minimum</p><a class="secondary-btn" href="/activities.html">Complete activity →</a></article>`).join("")||'<p class="muted">No active campaigns are available right now.</p>';}const section=document.getElementById("campaigns");if(section&&!section.querySelector(".business-suite-card")){section.insertAdjacentHTML("afterend",'<section class="business-suite-card" style="margin-top:22px;padding:24px;border-radius:18px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(135deg,rgba(124,92,255,.14),rgba(15,21,34,.9));display:flex;justify-content:space-between;gap:20px;align-items:center"><div><p class="dashboard-eyebrow">VSBIL BUSINESS SUITE</p><h2 style="margin:4px 0">Tools that help you run a business</h2><p style="opacity:.7">Inventory · invoices · landlord records · church offerings · funeral contributions · WhatsApp automation.</p></div><a class="secondary-btn" href="/business.html">Open Business Suite →</a></section>')}const withdraw=document.getElementById("withdrawBtn");if(withdraw){const clone=withdraw.cloneNode(true);withdraw.replaceWith(clone);clone.addEventListener("click",()=>location.href="/wallet.html#withdraw")}}catch(error){console.warn("Dashboard enhancement failed",error)}})();
