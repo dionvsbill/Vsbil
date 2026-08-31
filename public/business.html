@@ -1,1 +1,100 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Business Suite — VSBIL</title><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/business.css"></head><body><main class="biz-shell"><header class="biz-head"><a href="/dashboard.html" class="brand"><img src="/assets/vsbil-logo.svg" alt="VSBIL"></a><div><small>VSBIL BUSINESS SUITE</small><h1>Run more of your business in one place.</h1><p>Inventory, invoices, property management, church records, community contributions and a complete customer storefront.</p></div><a class="back" href="/dashboard.html">Dashboard</a></header><section class="pricing"><article><b>Inventory</b><strong>GH₵150<span>/month</span></strong><small>Stock, SKUs & movements</small><button class="primary subscribe" data-purpose="inventory_subscription">Subscribe</button></article><article><b>Invoices</b><strong>GH₵100<span>/month</span></strong><small>Professional invoice records</small><button class="primary subscribe" data-purpose="invoice_subscription">Subscribe</button></article><article><b>Landlord</b><strong>GH₵200<span>/year</span></strong><small>Rent & utility tracking</small><button class="primary subscribe" data-purpose="landlord_subscription">Subscribe</button></article><article><b>Church</b><strong>GH₵300<span>/year</span></strong><small>Offering records & reports</small><button class="primary subscribe" data-purpose="church_subscription">Subscribe</button></article><article><b>WhatsApp Starter</b><strong>GH₵150<span>/month</span></strong><small>Automated Business replies</small><a class="primary pricing-link" href="/whatsapp-bot.html">Open WhatsApp</a></article><article><b>Shop + WhatsApp</b><strong>GH₵250<span>/month</span></strong><small>Save GH₵50 when both are active</small><button class="primary subscribe" data-purpose="shop_whatsapp_bundle">Get bundle</button></article></section><nav class="biz-nav"><button class="active" data-tab="home">Overview</button><button data-tab="inventory">Inventory</button><button data-tab="invoices">Invoices</button><button data-tab="landlord">Landlord</button><button data-tab="church">Church</button><button data-tab="funeral">Funeral contributions</button></nav><section id="home" class="tab active"><div class="cards"><article><b>Shop Inventory</b><span>Stock, SKUs, prices and stock movements.</span><a href="#inventory" data-jump="inventory">Open →</a></article><article><b>Shop Admin & E-commerce</b><span>Publish a storefront, sell products, manage orders and give buyers live tracking.</span><a href="/shop-admin.html">Open Shop Admin →</a></article><article><b>Invoice Generator</b><span>Professional GHS invoices and payment status.</span><a href="#invoices" data-jump="invoices">Open →</a></article><article><b>Landlord Manager</b><span>Tenants, rent, utilities and payment records.</span><a href="#landlord" data-jump="landlord">Open →</a></article><article><b>Church Offering Tracker</b><span>Daily offering entries and automatic totals.</span><a href="#church" data-jump="church">Open →</a></article><article><b>Funeral Contributions</b><span>Create a public contribution link and track paid support.</span><a href="#funeral" data-jump="funeral">Open →</a></article><article><b>WhatsApp Business</b><span>Automated replies for connected client numbers.</span><a href="/whatsapp-bot.html">Open →</a></article><article><b>Buyer Order Tracking</b><span>Customers can track an order with order number + phone number.</span><a href="/order-track.html">Track an order →</a></article></div><div class="notice"><strong>Secure payments</strong><span>Business subscriptions are initialized with Paystack and activated only after server-side verification. Funeral contributions use a public payment flow and can apply the planned 3% VSBIL platform fee after successful verification. Shop checkout calculates sale prices server-side and reserves stock atomically.</span></div></section><section id="inventory" class="tab"><div class="section-head"><div><small>SHOP INVENTORY</small><h2>Stock control</h2></div><button class="primary" id="newShop">+ New shop</button></div><div id="shopList" class="list"></div><div id="inventoryPanel" class="panel hidden"><h3>Products</h3><form id="productForm" class="form-grid"><input name="shopId" type="hidden"><input name="name" placeholder="Product name" required><input name="sku" placeholder="SKU" required><input name="quantity" type="number" min="0" placeholder="Quantity"><input name="selling_price" type="number" min="0" step="0.01" placeholder="Selling price (GHS)"><input name="cost_price" type="number" min="0" step="0.01" placeholder="Cost price (GHS)"><input name="reorder_level" type="number" min="0" placeholder="Reorder level"><button class="primary">Add product</button></form><div id="productList"></div></div></section><section id="invoices" class="tab"><div class="section-head"><div><small>INVOICE GENERATOR</small><h2>Professional invoices</h2></div></div><form id="invoiceForm" class="panel form-grid"><input name="client_name" placeholder="Client / business name" required><input name="client_email" type="email" placeholder="Client email"><input name="client_phone" placeholder="Client phone"><input name="due_date" type="date"><textarea name="notes" placeholder="Notes"></textarea><div id="invoiceItems"><div class="item-row"><input name="description" placeholder="Item description" required><input name="quantity" type="number" min="1" value="1"><input name="unit_price" type="number" min="0" step="0.01" placeholder="Unit price" required></div></div><button type="button" class="secondary" id="addInvoiceItem">+ Add item</button><button class="primary">Create invoice</button></form><div id="invoiceList" class="list"></div></section><section id="landlord" class="tab"><div class="section-head"><div><small>LANDLORD MANAGER</small><h2>Rent & utility tracking</h2></div></div><form id="propertyForm" class="panel form-grid"><input name="name" placeholder="Property / building name" required><input name="address" placeholder="Address"><input name="rent_amount" type="number" min="0" step="0.01" placeholder="Default rent (GHS)" required><select name="rent_cycle"><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select><button class="primary">Add property</button></form><div id="propertyList" class="list"></div></section><section id="church" class="tab"><div class="section-head"><div><small>CHURCH OFFERING TRACKER</small><h2>Record an offering</h2></div></div><form id="offeringForm" class="panel form-grid"><input name="church_name" placeholder="Church name" required><input name="offering_date" type="date" required><textarea name="entries" placeholder='Entries JSON, e.g. [{"category":"Sunday offering","amount":500,"method":"cash"}]' required></textarea><button class="primary">Save offering</button></form><div id="offeringList" class="list"></div></section><section id="funeral" class="tab"><div class="section-head"><div><small>FUNERAL CONTRIBUTIONS</small><h2>Create a contribution page</h2></div></div><form id="funeralForm" class="panel form-grid"><input name="title" placeholder="Campaign title" required><input name="beneficiary_name" placeholder="Beneficiary / family name"><input name="beneficiary_phone" placeholder="MoMo phone"><input name="target_amount" type="number" min="0" step="0.01" placeholder="Target amount (GHS)"><textarea name="story" placeholder="Story / message to supporters"></textarea><button class="primary">Create public link</button></form><div id="funeralList" class="list"></div><p class="legal-note">A 3% platform fee can be applied to successfully verified contributions. Do not mark a contribution paid from client-side data; payment confirmation must come from the payment provider webhook/verification.</p></section></main><script src="/js/business.js" defer></script><script src="/js/pwa.js" defer></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#070a12">
+  <meta name="description" content="VSBIL Business Suite — tools for shops, invoices, property, church and community management.">
+  <title>Business Suite — VSBIL</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/business.css">
+</head>
+<body class="business-page">
+  <div class="biz-app">
+    <header class="biz-topbar">
+      <button class="biz-icon-btn mobile-menu" id="bizMenu" type="button" aria-label="Open business navigation">☰</button>
+      <a href="/" class="biz-brand"><img src="/assets/vsbil-logo.svg" alt="VSBIL"><span>VSBIL</span></a>
+      <div class="biz-search"><span>⌕</span><input type="search" placeholder="Search Business Suite" aria-label="Search Business Suite"></div>
+      <div class="biz-top-actions">
+        <a class="biz-icon-btn" href="/notifications.html" aria-label="Notifications">♢</a>
+        <a class="biz-avatar" href="/profile.html" aria-label="Profile">U</a>
+      </div>
+    </header>
+
+    <aside class="biz-sidebar" id="bizSidebar">
+      <div class="sidebar-label">BUSINESS SUITE</div>
+      <nav class="sidebar-nav" aria-label="Business navigation">
+        <button class="active" data-tab="home"><span>⌂</span> Overview</button>
+        <button data-tab="inventory"><span>▦</span> Shop & Inventory</button>
+        <button data-tab="invoices"><span>▤</span> Invoices</button>
+        <button data-tab="landlord"><span>⌂</span> Landlord</button>
+        <button data-tab="church"><span>✦</span> Church</button>
+        <button data-tab="funeral"><span>♡</span> Contributions</button>
+      </nav>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-label">SERVICES</div>
+      <nav class="sidebar-nav">
+        <a href="/shop-admin.html"><span>▣</span> Shop Admin</a>
+        <a href="/whatsapp-bot.html"><span>◌</span> WhatsApp Bot</a>
+        <a href="/order-track.html"><span>⌁</span> Track Order</a>
+        <a href="/dashboard.html"><span>←</span> Main Dashboard</a>
+      </nav>
+      <div class="sidebar-help"><strong>Need help?</strong><p>Get support for your business tools.</p><a href="/support.html">Open support →</a></div>
+    </aside>
+
+    <main class="biz-main">
+      <section class="biz-hero">
+        <div>
+          <div class="eyebrow">VSBIL BUSINESS</div>
+          <h1>Everything your business needs.</h1>
+          <p>Manage your shop, customers, invoices, property and community services from one professional workspace.</p>
+        </div>
+        <a class="action-btn action-primary" href="/shop-admin.html"><span>▣</span> Open Shop</a>
+      </section>
+
+      <section class="pricing" aria-label="Business plans">
+        <article><div class="plan-icon">▦</div><b>Inventory</b><strong>GH₵150 <small>/month</small></strong><p>Stock, SKUs & movements</p><button class="action-btn action-primary subscribe" data-purpose="inventory_subscription"><span>→</span> Subscribe</button></article>
+        <article><div class="plan-icon">▤</div><b>Invoices</b><strong>GH₵100 <small>/month</small></strong><p>Professional invoice records</p><button class="action-btn action-blue subscribe" data-purpose="invoice_subscription"><span>→</span> Subscribe</button></article>
+        <article><div class="plan-icon">⌂</div><b>Landlord</b><strong>GH₵200 <small>/year</small></strong><p>Rent & utility tracking</p><button class="action-btn action-green subscribe" data-purpose="landlord_subscription"><span>→</span> Subscribe</button></article>
+        <article><div class="plan-icon">✦</div><b>Church</b><strong>GH₵300 <small>/year</small></strong><p>Offering records & reports</p><button class="action-btn action-purple subscribe" data-purpose="church_subscription"><span>→</span> Subscribe</button></article>
+        <article><div class="plan-icon">◌</div><b>WhatsApp Starter</b><strong>GH₵150 <small>/month</small></strong><p>Automated business replies</p><a class="action-btn action-teal" href="/whatsapp-bot.html"><span>↗</span> Open WhatsApp</a></article>
+        <article class="bundle-card"><div class="plan-icon">✦</div><b>Shop + WhatsApp</b><strong>GH₵250 <small>/month</small></strong><p>Save GH₵50 when both are active</p><button class="action-btn action-gold subscribe" data-purpose="shop_whatsapp_bundle"><span>★</span> Get bundle</button></article>
+      </section>
+
+      <div class="biz-mobile-nav" aria-label="Business navigation">
+        <button class="active" data-tab="home"><span>⌂</span><small>Home</small></button>
+        <button data-tab="inventory"><span>▦</span><small>Shop</small></button>
+        <button data-tab="invoices"><span>▤</span><small>Invoices</small></button>
+        <button data-tab="landlord"><span>⌂</span><small>Property</small></button>
+        <button data-tab="church"><span>✦</span><small>Services</small></button>
+      </div>
+
+      <section id="home" class="tab active">
+        <div class="section-title"><div><div class="eyebrow">WORKSPACE</div><h2>Business tools</h2><p>Choose a service below. Each service works independently.</p></div></div>
+        <div class="feature-grid">
+          <article class="feature-card feature-shop"><div class="feature-icon">▦</div><div><h3>Shop & Inventory</h3><p>Products, SKUs, stock movements, storefronts and customer orders.</p></div><a href="#inventory" data-jump="inventory">Manage inventory <span>→</span></a></article>
+          <article class="feature-card"><div class="feature-icon">▤</div><div><h3>Invoice Generator</h3><p>Create professional GHS invoices and keep payment records organized.</p></div><a href="#invoices" data-jump="invoices">Create invoice <span>→</span></a></article>
+          <article class="feature-card"><div class="feature-icon">⌂</div><div><h3>Landlord Manager</h3><p>Track tenants, rent cycles, utilities and payment records.</p></div><a href="#landlord" data-jump="landlord">Manage property <span>→</span></a></article>
+          <article class="feature-card"><div class="feature-icon">✦</div><div><h3>Church Offering</h3><p>Record offerings and generate organized financial records.</p></div><a href="#church" data-jump="church">Open tracker <span>→</span></a></article>
+          <article class="feature-card"><div class="feature-icon">♡</div><div><h3>Funeral Contributions</h3><p>Create a public contribution page and track verified support.</p></div><a href="#funeral" data-jump="funeral">Create campaign <span>→</span></a></article>
+          <article class="feature-card"><div class="feature-icon">◌</div><div><h3>WhatsApp Business</h3><p>Connect a business number and automate customer replies.</p></div><a href="/whatsapp-bot.html">Configure bot <span>→</span></a></article>
+        </div>
+        <div class="trust-strip"><span>✓</span><div><strong>Secure business payments</strong><p>Subscriptions are activated only after server-side payment verification. Customer payment status is never trusted from the browser.</p></div></div>
+      </section>
+
+      <section id="inventory" class="tab"><div class="section-title"><div><div class="eyebrow">SHOP & INVENTORY</div><h2>Stock control</h2><p>Keep your products and stock organized.</p></div><button class="action-btn action-primary" id="newShop"><span>＋</span> New shop</button></div><div id="shopList" class="list"></div><div id="inventoryPanel" class="panel hidden"><h3>Products</h3><form id="productForm" class="form-grid"><input name="shopId" type="hidden"><input name="name" placeholder="Product name" required><input name="sku" placeholder="SKU" required><input name="quantity" type="number" min="0" placeholder="Quantity"><input name="selling_price" type="number" min="0" step="0.01" placeholder="Selling price (GHS)"><input name="cost_price" type="number" min="0" step="0.01" placeholder="Cost price (GHS)"><input name="reorder_level" type="number" min="0" placeholder="Reorder level"><button class="action-btn action-primary"><span>＋</span> Add product</button></form><div id="productList"></div></div></section>
+
+      <section id="invoices" class="tab"><div class="section-title"><div><div class="eyebrow">INVOICE GENERATOR</div><h2>Professional invoices</h2><p>Create clear invoices for your customers.</p></div></div><form id="invoiceForm" class="panel form-grid"><input name="client_name" placeholder="Client / business name" required><input name="client_email" type="email" placeholder="Client email"><input name="client_phone" placeholder="Client phone"><input name="due_date" type="date"><textarea name="notes" placeholder="Notes"></textarea><div id="invoiceItems"><div class="item-row"><input name="description" placeholder="Item description" required><input name="quantity" type="number" min="1" value="1"><input name="unit_price" type="number" min="0" step="0.01" placeholder="Unit price" required></div></div><button type="button" class="action-btn action-secondary" id="addInvoiceItem"><span>＋</span> Add item</button><button class="action-btn action-primary"><span>▤</span> Create invoice</button></form><div id="invoiceList" class="list"></div></section>
+
+      <section id="landlord" class="tab"><div class="section-title"><div><div class="eyebrow">LANDLORD MANAGER</div><h2>Rent & utility tracking</h2><p>Keep property records in one place.</p></div></div><form id="propertyForm" class="panel form-grid"><input name="name" placeholder="Property / building name" required><input name="address" placeholder="Address"><input name="rent_amount" type="number" min="0" step="0.01" placeholder="Default rent (GHS)" required><select name="rent_cycle"><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select><button class="action-btn action-green"><span>＋</span> Add property</button></form><div id="propertyList" class="list"></div></section>
+
+      <section id="church" class="tab"><div class="section-title"><div><div class="eyebrow">CHURCH OFFERING TRACKER</div><h2>Record an offering</h2><p>Simple records for transparent reporting.</p></div></div><form id="offeringForm" class="panel form-grid"><input name="church_name" placeholder="Church name" required><input name="offering_date" type="date" required><textarea name="entries" placeholder='Entries JSON, e.g. [{"category":"Sunday offering","amount":500,"method":"cash"}]' required></textarea><button class="action-btn action-purple"><span>＋</span> Save offering</button></form><div id="offeringList" class="list"></div></section>
+
+      <section id="funeral" class="tab"><div class="section-title"><div><div class="eyebrow">COMMUNITY CONTRIBUTIONS</div><h2>Create a contribution page</h2><p>Share one public link with supporters.</p></div></div><form id="funeralForm" class="panel form-grid"><input name="title" placeholder="Campaign title" required><input name="beneficiary_name" placeholder="Beneficiary / family name"><input name="beneficiary_phone" placeholder="MoMo phone"><input name="target_amount" type="number" min="0" step="0.01" placeholder="Target amount (GHS)"><textarea name="story" placeholder="Story / message to supporters"></textarea><button class="action-btn action-primary"><span>↗</span> Create public link</button></form><div id="funeralList" class="list"></div><p class="legal-note">A 3% platform fee can be applied to successfully verified contributions. Payment confirmation must come from the payment provider verification/webhook.</p></section>
+    </main>
+  </div>
+  <script src="/js/business.js" defer></script>
+  <script src="/js/pwa.js" defer></script>
+  <script>document.getElementById('bizMenu')?.addEventListener('click',()=>document.getElementById('bizSidebar')?.classList.toggle('open'));</script>
+</body>
+</html>
