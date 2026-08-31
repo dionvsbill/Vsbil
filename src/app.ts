@@ -27,6 +27,7 @@ import verificationRouter from "./routes/verification.js";
 import supportRouter from "./routes/support.js";
 import socialRouter from "./routes/social.js";
 import creatorProgramRouter from "./routes/creatorProgram.js";
+import jumiaImporterRouter, { cronRouter as jumiaCronRouter } from "./routes/jumiaImporter.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -44,8 +45,6 @@ const configuredOrigins = new Set(
     .filter(Boolean),
 );
 
-// Render currently serves the VSBIL web app and API from the same origin.
-// Additional production origins can be supplied through APP_URL as a comma-separated list.
 const productionOrigins = new Set([
   "https://vsbil.onrender.com",
   ...configuredOrigins,
@@ -68,10 +67,8 @@ app.use(
   cors({
     origin: (origin, cb) => {
       if (!origin) return cb(null, true);
-
       const normalized = normalizeOrigin(origin);
       if (!isProduction) return cb(null, true);
-
       return productionOrigins.has(normalized)
         ? cb(null, true)
         : cb(new Error("CORS origin denied"));
@@ -84,14 +81,13 @@ app.use(
       "Accept",
       "X-Requested-With",
       "X-Idempotency-Key",
+      "X-Cron-Secret",
     ],
     exposedHeaders: ["X-Request-Id"],
     optionsSuccessStatus: 204,
   }),
 );
 
-// Profile and timeline media are sent as short-lived base64 payloads to the API
-// and immediately stored in the private server-side Supabase storage flow.
 app.use(
   express.json({
     limit: "8mb",
@@ -106,195 +102,74 @@ app.use((req, res, next) => {
     "X-Request-Id",
     `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
   );
-
   if (req.path.startsWith("/api/")) {
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("Pragma", "no-cache");
   }
-
   next();
 });
 
-app.use(
-  "/api/auth",
-  rateLimit({ windowMs: 60000, max: 30, key: (req) => `${req.ip}:auth` }),
-  authRouter,
-);
-app.use(
-  "/api/auth/advanced",
-  rateLimit({ windowMs: 60000, max: 12, key: (req) => `${req.ip}:advanced-auth` }),
-  authAdvancedRouter,
-);
-app.use(
-  "/api/auth/production",
-  rateLimit({ windowMs: 60000, max: 15, key: (req) => `${req.ip}:production-auth` }),
-  authProductionRouter,
-);
+app.use("/api/auth", rateLimit({ windowMs: 60000, max: 30, key: (req) => `${req.ip}:auth` }), authRouter);
+app.use("/api/auth/advanced", rateLimit({ windowMs: 60000, max: 12, key: (req) => `${req.ip}:advanced-auth` }), authAdvancedRouter);
+app.use("/api/auth/production", rateLimit({ windowMs: 60000, max: 15, key: (req) => `${req.ip}:production-auth` }), authProductionRouter);
 app.use("/api/auth/production", authProductionPatchRouter);
-app.use(
-  "/api/auth",
-  rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.ip}:oauth` }),
-  oauthRouter,
-);
-app.use(
-  "/api/payment",
-  rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.ip}:payment` }),
-  paymentRouter,
-);
-app.use(
-  "/api/youtube",
-  rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.ip}:youtube` }),
-  youtubeRouter,
-);
+app.use("/api/auth", rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.ip}:oauth` }), oauthRouter);
+app.use("/api/payment", rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.ip}:payment` }), paymentRouter);
+app.use("/api/youtube", rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.ip}:youtube` }), youtubeRouter);
 app.use("/api/whatsapp", whatsappRouter);
-app.use(
-  "/api/business-commerce",
-  rateLimit({ windowMs: 60000, max: 80, key: (req) => `${req.ip}:commerce` }),
-  businessCommerceRouter,
-);
-app.use(
-  "/api/business",
-  rateLimit({ windowMs: 60000, max: 100, key: (req) => `${req.ip}:business` }),
-  businessRouter,
-);
-app.use(
-  "/api/business-payments",
-  rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.ip}:business-payments` }),
-  businessPaymentsRouter,
-);
-app.use(
-  "/api/verification",
-  rateLimit({ windowMs: 60000, max: 10, key: (req) => `${req.ip}:verification` }),
-  verificationRouter,
-);
-app.use(
-  "/api/support",
-  rateLimit({ windowMs: 60000, max: 12, key: (req) => `${req.ip}:support` }),
-  supportRouter,
-);
-app.use(
-  "/api/social",
-  rateLimit({ windowMs: 60000, max: 100, key: (req) => `${req.ip}:social` }),
-  socialRouter,
-);
-app.use(
-  "/api/creator-program",
-  rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.ip}:creator-program` }),
-  creatorProgramRouter,
-);
+app.use("/api/business-commerce", rateLimit({ windowMs: 60000, max: 80, key: (req) => `${req.ip}:commerce` }), businessCommerceRouter);
+app.use("/api/business", rateLimit({ windowMs: 60000, max: 100, key: (req) => `${req.ip}:business` }), businessRouter);
+app.use("/api/business-payments", rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.ip}:business-payments` }), businessPaymentsRouter);
+app.use("/api/verification", rateLimit({ windowMs: 60000, max: 10, key: (req) => `${req.ip}:verification` }), verificationRouter);
+app.use("/api/support", rateLimit({ windowMs: 60000, max: 12, key: (req) => `${req.ip}:support` }), supportRouter);
+app.use("/api/social", rateLimit({ windowMs: 60000, max: 100, key: (req) => `${req.ip}:social` }), socialRouter);
+app.use("/api/creator-program", rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.ip}:creator-program` }), creatorProgramRouter);
+app.use("/api/import/jumia", rateLimit({ windowMs: 60000, max: 10, key: (req) => `${req.ip}:jumia-import` }), jumiaImporterRouter);
+app.use("/api/cron", jumiaCronRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/withdrawals", withdrawalRouter);
-app.use(
-  "/api/activities",
-  rateLimit({ windowMs: 60000, max: 60, key: (req) => `${req.ip}:activities` }),
-  activityRouter,
-);
+app.use("/api/activities", rateLimit({ windowMs: 60000, max: 60, key: (req) => `${req.ip}:activities` }), activityRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/admin", supportAdminRouter);
 app.use("/api/admin", campaignAdminRouter);
 app.use("/api/admin", adminRouter);
 
-app.get("/api/health", (_req, res) =>
-  res.json({
-    success: true,
-    service: "VSBIL API",
-    status: "online",
-    environment: nodeEnv,
-    time: new Date().toISOString(),
-  }),
-);
+app.get("/api/health", (_req, res) => res.json({ success: true, service: "VSBIL API", status: "online", environment: nodeEnv, time: new Date().toISOString() }));
 
 const publicDirectory = path.resolve(__dirname, "../public");
-
 const inject = (html: string) => {
   const shell = `\n<link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/assets/vsbil-logo.svg" type="image/svg+xml"><meta name="theme-color" content="#070a12"><link rel="stylesheet" href="/css/brand.css"><link rel="stylesheet" href="/css/site-shell.css"><link rel="stylesheet" href="/css/theme-fixes.css"><link rel="stylesheet" href="/css/social.css"><script src="/js/site-shell.js" defer></script>`;
-
   return html
-    .replace(
-      "</head>",
-      `${html.includes("/js/site-shell.js") ? "" : shell}</head>`,
-    )
-    .replace(
-      "</body>",
-      `${html.includes("/js/pwa.js") ? "" : '<script src="/js/pwa.js" defer></script>'}</body>`,
-    );
+    .replace("</head>", `${html.includes("/js/site-shell.js") ? "" : shell}</head>`)
+    .replace("</body>", `${html.includes("/js/pwa.js") ? "" : '<script src="/js/pwa.js" defer></script>'}</body>`);
 };
 
-const send = async (
-  file: string,
-  res: express.Response,
-  next: express.NextFunction,
-) => {
+const send = async (file: string, res: express.Response, next: express.NextFunction) => {
   try {
     const html = await readFile(file, "utf8");
-
-    res
-      .status(200)
-      .type("html")
-      .setHeader("X-Content-Type-Options", "nosniff")
-      .setHeader(
-        "Cache-Control",
-        isProduction ? "public,max-age=60,must-revalidate" : "no-store",
-      )
-      .send(inject(html));
+    res.status(200).type("html").setHeader("X-Content-Type-Options", "nosniff").setHeader("Cache-Control", isProduction ? "public,max-age=60,must-revalidate" : "no-store").send(inject(html));
   } catch (error: any) {
     if (error?.code === "ENOENT") return next();
     return next(error);
   }
 };
 
-app.get("/", (_req, res, next) =>
-  send(path.join(publicDirectory, "index.html"), res, next),
-);
-
+app.get("/", (_req, res, next) => send(path.join(publicDirectory, "index.html"), res, next));
+app.get("/admin/import/jumia", (_req, res, next) => send(path.join(publicDirectory, "admin", "import", "jumia.html"), res, next));
 app.get(/^\/.*\.html$/, (req, res, next) => {
   const relative = req.path.replace(/^\/+/, "");
   const safe = path.normalize(relative);
-
-  if (safe.startsWith("..") || path.isAbsolute(safe)) {
-    return res.status(400).end();
-  }
-
+  if (safe.startsWith("..") || path.isAbsolute(safe)) return res.status(400).end();
   return send(path.join(publicDirectory, safe), res, next);
 });
-
-app.use(
-  express.static(publicDirectory, {
-    extensions: ["html"],
-    setHeaders: (res) => res.setHeader("X-Content-Type-Options", "nosniff"),
-  }),
-);
-
-app.all("/api/*splat", (_req, res) =>
-  res.status(404).json({
-    success: false,
-    message: "API endpoint not found",
-    code: "NOT_FOUND",
-  }),
-);
-
-app.use(
-  (
-    error: unknown,
-    _req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction,
-  ) => {
-    console.error("Unhandled application error", error);
-
-    if (res.headersSent) return;
-
-    const corsError =
-      error instanceof Error && error.message === "CORS origin denied";
-
-    res.status(corsError ? 403 : 500).json({
-      success: false,
-      message: corsError ? "Origin is not allowed" : "Internal server error",
-      code: corsError ? "CORS_DENIED" : "INTERNAL_ERROR",
-      requestId: res.getHeader("X-Request-Id"),
-    });
-  },
-);
+app.use(express.static(publicDirectory, { extensions: ["html"], setHeaders: (res) => res.setHeader("X-Content-Type-Options", "nosniff") }));
+app.all("/api/*splat", (_req, res) => res.status(404).json({ success: false, message: "API endpoint not found", code: "NOT_FOUND" }));
+app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error("Unhandled application error", error);
+  if (res.headersSent) return;
+  const corsError = error instanceof Error && error.message === "CORS origin denied";
+  res.status(corsError ? 403 : 500).json({ success: false, message: corsError ? "Origin is not allowed" : "Internal server error", code: corsError ? "CORS_DENIED" : "INTERNAL_ERROR", requestId: res.getHeader("X-Request-Id") });
+});
 
 export default app;
