@@ -31,6 +31,7 @@ import socialRouter from "./routes/social.js";
 import socialMonetizationRouter from "./routes/socialMonetization.js";
 import creatorProgramRouter from "./routes/creatorProgram.js";
 import jumiaImporterRouter, { cronRouter as jumiaCronRouter } from "./routes/jumiaImporter.js";
+import marketplaceRouter from "./routes/marketplace.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -55,6 +56,7 @@ app.use("/api/auth", rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.
 app.use("/api/payment", rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.ip}:payment` }), paymentRouter);
 app.use("/api/youtube", rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.ip}:youtube` }), youtubeRouter);
 app.use("/api/whatsapp", whatsappRouter);
+app.use("/api/marketplace", rateLimit({ windowMs: 60000, max: 80, key: (req) => `${req.ip}:marketplace` }), marketplaceRouter);
 app.use("/api/business-commerce", rateLimit({ windowMs: 60000, max: 80, key: (req) => `${req.ip}:commerce` }), storefrontEnrichmentRouter);
 app.use("/api/business-commerce", rateLimit({ windowMs: 60000, max: 80, key: (req) => `${req.ip}:commerce` }), businessCommerceRouter);
 app.use("/api/business", rateLimit({ windowMs: 60000, max: 100, key: (req) => `${req.ip}:business` }), businessRouter);
@@ -78,33 +80,20 @@ app.use("/api/admin", adminRouter);
 app.get("/api/health", (_req, res) => res.json({ success: true, service: "VSBIL API", status: "online", environment: nodeEnv, time: new Date().toISOString() }));
 
 const publicDirectory = path.resolve(__dirname, "../public");
-const shellVersion = "20260831-2";
+const shellVersion = "20260831-4";
 const inject = (html: string) => {
   const shell = `\n<link rel="manifest" href="/manifest.webmanifest?v=${shellVersion}"><link rel="icon" href="/assets/vsbil-logo.svg" type="image/svg+xml"><meta name="theme-color" content="#070a12"><link rel="stylesheet" href="/css/brand.css?v=${shellVersion}"><link rel="stylesheet" href="/css/site-shell.css?v=${shellVersion}"><link rel="stylesheet" href="/css/theme-fixes.css?v=${shellVersion}"><link rel="stylesheet" href="/css/social.css?v=${shellVersion}"><script src="/js/site-shell.js?v=${shellVersion}" defer></script>`;
   const withHead = html.replace("</head>", `${html.includes("/js/site-shell.js") ? "" : shell}</head>`);
   return withHead.replace("</body>", `${html.includes("/js/pwa.js") ? "" : `<script src="/js/pwa.js?v=${shellVersion}" defer></script>`}</body>`);
 };
-
 const send = async (file: string, res: express.Response, next: express.NextFunction) => {
-  try {
-    const html = await readFile(file, "utf8");
-    res.status(200).type("html").setHeader("X-Content-Type-Options", "nosniff").setHeader("Cache-Control", "no-store").send(inject(html));
-  } catch (error: any) {
-    if (error?.code === "ENOENT") return next();
-    return next(error);
-  }
+  try { const html = await readFile(file, "utf8"); return res.status(200).type("html").setHeader("X-Content-Type-Options", "nosniff").setHeader("Cache-Control", "no-store").send(inject(html)); }
+  catch (error: any) { if (error?.code === "ENOENT") return next(); return next(error); }
 };
-
 app.get("/", (_req, res, next) => send(path.join(publicDirectory, "index.html"), res, next));
 app.get("/admin/import/jumia", (_req, res, next) => send(path.join(publicDirectory, "admin", "import", "jumia.html"), res, next));
-app.get(/^\/.*\.html$/, (req, res, next) => {
-  const relative = req.path.replace(/^\/+/, "");
-  const safe = path.normalize(relative);
-  if (safe.startsWith("..") || path.isAbsolute(safe)) return res.status(400).end();
-  return send(path.join(publicDirectory, safe), res, next);
-});
+app.get(/^\/.*\.html$/, (req, res, next) => { const relative = req.path.replace(/^\/+/, ""); const safe = path.normalize(relative); if (safe.startsWith("..") || path.isAbsolute(safe)) return res.status(400).end(); return send(path.join(publicDirectory, safe), res, next); });
 app.use(express.static(publicDirectory, { extensions: ["html"], setHeaders: (res) => res.setHeader("X-Content-Type-Options", "nosniff") }));
 app.all("/api/*splat", (_req, res) => res.status(404).json({ success: false, message: "API endpoint not found", code: "NOT_FOUND" }));
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => { console.error("Unhandled application error", error); if (res.headersSent) return; const corsError = error instanceof Error && error.message === "CORS origin denied"; res.status(corsError ? 403 : 500).json({ success: false, message: corsError ? "Origin is not allowed" : "Internal server error", code: corsError ? "CORS_DENIED" : "INTERNAL_ERROR", requestId: res.getHeader("X-Request-Id") }); });
-
 export default app;
