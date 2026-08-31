@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Jumia Importer · VSBIL Control Center</title>
+  <link rel="stylesheet" href="/css/admin.css">
+  <style>
+    .import-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,1.2fr);gap:18px}
+    .field{display:grid;gap:7px;margin:12px 0}.field label{font-weight:700}.field input,.field textarea,.field select{width:100%;box-sizing:border-box;padding:12px;border:1px solid #d7dbe5;border-radius:10px;background:var(--panel,#fff);color:inherit}.field textarea{min-height:140px;resize:vertical}.toolbar{display:flex;gap:10px;flex-wrap:wrap}.primary{cursor:pointer}.image-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.image-card{border:1px solid #ddd;border-radius:10px;padding:5px;background:#fff}.image-card img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:7px}.muted{opacity:.7}.status{padding:10px 12px;border-radius:10px;background:rgba(127,127,127,.1);margin-top:10px}.danger-note{font-size:.88rem;opacity:.75}.hidden{display:none}@media(max-width:850px){.import-grid{grid-template-columns:1fr}.image-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  </style>
+</head>
+<body>
+  <aside>
+    <a class="brand" href="/">VSBIL <small>CONTROL CENTER</small></a>
+    <nav>
+      <a href="/admin/">Overview</a>
+      <a href="/admin/import/jumia" class="active">Jumia Importer</a>
+      <a href="/dashboard.html">User workspace</a>
+    </nav>
+    <a href="/admin/">← Full admin panel</a>
+  </aside>
+  <main>
+    <header><div><p>COMMERCE OPERATIONS</p><h1>Jumia Product Importer</h1></div><a class="button" href="/admin/">Admin</a></header>
+    <div class="import-grid">
+      <section class="panel">
+        <h2>Import a Jumia Ghana product</h2>
+        <p class="muted">Fetch public product metadata server-side. VSBIL stores remote image URLs rather than re-hosting marketplace images.</p>
+        <div class="field"><label for="url">Paste Jumia Product Link</label><input id="url" type="url" placeholder="https://www.jumia.com.gh/..." autocomplete="off"></div>
+        <button id="fetch" class="primary">Fetch Product</button>
+        <div id="status" class="status hidden"></div>
+        <p class="danger-note">Only import products you are permitted to promote. Respect Jumia terms, image rights, affiliate-program rules, pricing, and availability.</p>
+      </section>
+      <section id="result" class="panel hidden">
+        <h2>Review before publishing</h2>
+        <div class="field"><label for="shop">VSBIL shop</label><select id="shop"></select></div>
+        <div class="field"><label for="title">Title</label><input id="title" maxlength="250"></div>
+        <div class="field"><label for="price">Price (GHS)</label><input id="price" type="number" min="0" step="0.01"></div>
+        <div class="field"><label for="original">Original price (GHS)</label><input id="original" type="number" min="0" step="0.01"></div>
+        <div class="field"><label for="description">Description</label><textarea id="description" maxlength="5000"></textarea></div>
+        <div class="field"><label>Images · first image is cover</label><div id="images" class="image-grid"></div></div>
+        <div class="field"><label><input id="inStock" type="checkbox"> Imported source currently shows availability</label></div>
+        <div class="field"><label for="affiliate">VSBIL/Jumia affiliate tag (optional)</label><input id="affiliate" maxlength="100" placeholder="Uses server-configured tag when empty"></div>
+        <button id="publish" class="primary">Publish to VSBIL Shop</button>
+      </section>
+    </div>
+  </main>
+  <script src="/js/admin-jumia.js" defer></script>
+</body>
+</html>
