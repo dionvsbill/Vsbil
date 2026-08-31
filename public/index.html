@@ -1,1 +1,371 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Home — VSBIL</title><link rel="stylesheet" href="/css/premium.css"></head><body><div class="app"><header class="topbar"><a class="brand" href="/"><img src="/assets/vsbil-logo.svg" alt=""><span>VSBIL</span></a><div class="top-search"><input placeholder="Search VSBIL"></div><div class="top-actions"><button class="icon" onclick="location.href='/discover.html'">⌕</button><button class="icon" onclick="location.href='/notifications.html'">♢</button><a class="avatar" id="topAvatar" href="/profile.html">U</a></div></header><div class="shell"><aside class="sidebar"><nav class="nav"><div class="nav-links"><a class="active" href="/"><b>⌂</b>Home</a><a href="/discover.html"><b>◎</b>Discover</a><a href="/dashboard.html"><b>▦</b>Dashboard</a><a href="/profile.html"><b>●</b>Profile</a><a href="/creator.html"><b>◈</b>Campaigns</a><a href="/shop.html"><b>◇</b>Shop</a><a href="/business.html"><b>▤</b>Business</a><a href="/whatsapp-bot.html"><b>◉</b>WhatsApp</a><a href="/messages.html"><b>✉</b>Messages</a><a href="/notifications.html"><b>♢</b>Notifications</a><a href="/settings.html"><b>⚙</b>Settings</a></div></nav><div class="side-card"><strong>Build your presence</strong><p class="muted">Create posts, grow your audience and discover opportunities.</p><a class="btn primary" href="/profile.html#compose">Create post</a></div></aside><main><section class="card section composer"><a class="avatar" id="composerAvatar" href="/profile.html">U</a><input id="composer" readonly onclick="openComposer()" placeholder="What's on your mind?"></section><section class="card"><div class="feed-tabs"><button class="active" data-kind="all">Posts</button><button data-kind="video">Videos</button><button data-kind="campaign">Campaigns</button></div><div id="feed"><div class="section muted">Loading your feed…</div></div></section></main><aside class="right"><div class="side-card"><p class="eyebrow">DISCOVER</p><h3>People & creators</h3><p class="muted">Find profiles and communities that match your interests.</p><a class="btn" href="/discover.html">Explore</a></div><div class="side-card"><p class="eyebrow">OPPORTUNITIES</p><h3>Campaigns for you</h3><p class="muted">Eligible campaigns appear here when you join the earning program.</p><a class="btn primary" href="/creator.html">Explore campaigns</a></div><div class="side-card"><p class="eyebrow">SHOP</p><h3>Sponsored shops</h3><p class="muted">Discover products and offers from VSBIL sellers.</p><a class="btn green" href="/shop.html">Visit shop</a></div></aside></div></div><div class="modal" id="modal"><div class="modal-box"><div class="modal-head"><h2>Create post</h2><button class="close" onclick="closeComposer()">×</button></div><div class="field"><label>Post</label><textarea id="postBody" maxlength="5000" placeholder="Share something with your community…"></textarea></div><div class="field"><label>Media</label><input id="postMedia" type="file" accept="image/*,video/mp4,video/webm"></div><div class="modal-actions"><button class="btn" onclick="closeComposer()">Cancel</button><button class="btn primary" id="publish">Publish</button></div><p id="msg" class="muted"></p></div></div><div class="toast" id="toast"></div><script>const token=()=>localStorage.getItem('vsbil_access_token')||'';const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));async function api(p,o={}){const h=new Headers(o.headers||{});h.set('Accept','application/json');if(token())h.set('Authorization','Bearer '+token());if(o.body)h.set('Content-Type','application/json');const r=await fetch(p,{...o,headers:h,credentials:'include'});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.message||'Unable to complete request.');return d}function openComposer(){if(!token())return location.href='/login.html';document.getElementById('modal').classList.add('open');document.getElementById('postBody').focus()}function closeComposer(){document.getElementById('modal').classList.remove('open')}function render(posts){const f=document.getElementById('feed');if(!posts.length){f.innerHTML='<div class="section muted">No posts yet. Follow people or create your first post.</div>';return}f.innerHTML=posts.map(p=>{const u=p.users||{};const av=u.avatar_url?`<img src="${esc(u.avatar_url)}">`:esc((u.username||'U')[0].toUpperCase());return `<article class="post"><div class="post-head"><div class="avatar">${av}</div><div><div class="post-user">${esc(u.username||'VSBIL User')}</div><div class="post-meta">${new Date(p.created_at).toLocaleString()}</div></div></div>${p.body?`<div class="post-body">${esc(p.body)}</div>`:''}${p.media_url?(p.media_type==='video'?`<video class="post-media" controls playsinline src="${esc(p.media_url)}"></video>`:`<img class="post-media" loading="lazy" src="${esc(p.media_url)}">`):''}<div class="post-actions"><button data-like="${esc(p.id)}">♡ Like</button><button onclick="location.href='/profile.html?u=${encodeURIComponent(u.username||'')}#posts'">View profile</button></div></article>`}).join('');f.querySelectorAll('[data-like]').forEach(b=>b.onclick=async()=>{try{await api('/api/social/posts/'+b.dataset.like+'/like',{method:'POST'});b.textContent='♥ Liked';b.disabled=true}catch(e){show(e.message)}})}async function load(){if(!token()){document.getElementById('feed').innerHTML='<div class="section muted">Log in to personalize your VSBIL feed.</div>';return}try{const d=await api('/api/social/feed?limit=30');render(d.posts||[])}catch(e){document.getElementById('feed').innerHTML='<div class="section muted">Your feed is temporarily unavailable.</div>'}}async function me(){if(!token())return;try{const d=await api('/api/users/profile');const u=d.user||{};const html=u.avatar_url?`<img src="${esc(u.avatar_url)}">`:esc((u.username||'U')[0].toUpperCase());document.getElementById('topAvatar').innerHTML=html;document.getElementById('composerAvatar').innerHTML=html}catch{}}function show(t){const x=document.getElementById('toast');x.textContent=t;x.classList.add('show');setTimeout(()=>x.classList.remove('show'),2200)}document.querySelectorAll('.feed-tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.feed-tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');if(b.dataset.kind==='video')document.querySelectorAll('.post').forEach(p=>p.style.display=p.querySelector('video')?'':'none');else document.querySelectorAll('.post').forEach(p=>p.style.display='')});document.getElementById('publish').onclick=async()=>{try{const body=document.getElementById('postBody').value.trim(),file=document.getElementById('postMedia').files[0];if(!body&&!file)throw Error('Add text or media to publish.');let mediaUrl=null,mediaType=null;if(file){if(file.size>10*1024*1024)throw Error('Media must be smaller than 10 MB.');const r=new FileReader();const data=await new Promise((ok,no)=>{r.onload=()=>ok(String(r.result));r.onerror=()=>no(Error('Unable to read media.'));r.readAsDataURL(file)});const up=await api('/api/social/upload',{method:'POST',body:JSON.stringify({dataUrl:data,mediaType:file.type})});mediaUrl=up.url;mediaType=file.type.split('/')[0]}await api('/api/social/posts',{method:'POST',body:JSON.stringify({body,mediaUrl,mediaType,visibility:'public'})});closeComposer();document.getElementById('postBody').value='';document.getElementById('postMedia').value='';await load();show('Post published')}catch(e){document.getElementById('msg').textContent=e.message}};me().then(load)</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#070a12">
+  <title>Home — VSBIL</title>
+  <link rel="stylesheet" href="/css/premium.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <button class="icon mobile-menu" id="menuButton" aria-label="Open menu">☰</button>
+      <a class="brand" href="/">
+        <img src="/assets/vsbil-logo.svg" alt="VSBIL">
+        <span>VSBIL</span>
+      </a>
+      <div class="top-search">
+        <input id="search" type="search" placeholder="Search VSBIL">
+      </div>
+      <div class="top-actions">
+        <button class="icon" type="button" onclick="location.href='/discover.html'" aria-label="Discover">⌕</button>
+        <button class="icon" type="button" onclick="location.href='/notifications.html'" aria-label="Notifications">♢</button>
+        <a class="avatar" id="topAvatar" href="/profile.html" aria-label="Your profile">U</a>
+      </div>
+    </header>
+
+    <div class="shell">
+      <aside class="sidebar" id="sidebar">
+        <nav class="nav">
+          <div class="nav-links">
+            <a class="active" href="/"><b>⌂</b><span>Home</span></a>
+            <a href="/discover.html"><b>◎</b><span>For You</span></a>
+            <a href="/dashboard.html"><b>▦</b><span>Dashboard</span></a>
+            <a href="/profile.html"><b>●</b><span>Profile</span></a>
+            <a href="/creator.html"><b>◈</b><span>Campaigns</span></a>
+            <a href="/shop.html"><b>◇</b><span>Shop</span></a>
+            <a href="/business.html"><b>▤</b><span>Business</span></a>
+            <a href="/whatsapp-bot.html"><b>◉</b><span>WhatsApp</span></a>
+            <a href="/messages.html"><b>✉</b><span>Messages</span></a>
+            <a href="/notifications.html"><b>♢</b><span>Notifications</span></a>
+            <a href="/settings.html"><b>⚙</b><span>Settings</span></a>
+          </div>
+        </nav>
+        <div class="side-card">
+          <p class="eyebrow">CREATE</p>
+          <h3>Share with your audience</h3>
+          <p class="muted">Publish text, images or video from the composer.</p>
+          <button class="btn primary" id="createPostSide" type="button">＋ Create post</button>
+        </div>
+      </aside>
+
+      <main>
+        <section class="card section composer">
+          <a class="avatar" id="composerAvatar" href="/profile.html">U</a>
+          <button class="btn" id="composerTrigger" type="button" style="flex:1;justify-content:flex-start;">
+            What's on your mind?
+          </button>
+          <button class="btn primary" id="composerPlus" type="button" aria-label="Create post">＋</button>
+        </section>
+
+        <section class="card section">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">YOUR FEED</p>
+              <h1>Home</h1>
+            </div>
+            <button class="btn" id="refresh" type="button">Refresh</button>
+          </div>
+          <div class="feed-tabs" style="margin-top:18px;">
+            <button class="active" data-kind="all" type="button">Posts</button>
+            <button data-kind="video" type="button">Videos</button>
+            <button data-kind="campaign" type="button">Campaigns</button>
+          </div>
+          <div id="feed">
+            <div class="section muted">Loading your feed…</div>
+          </div>
+          <div style="display:flex;justify-content:center;margin-top:10px;">
+            <button class="btn" id="loadMore" type="button">Load more</button>
+          </div>
+        </section>
+      </main>
+
+      <aside class="right">
+        <div class="side-card">
+          <p class="eyebrow">DISCOVER</p>
+          <h3>People & creators</h3>
+          <p class="muted">Find creators, communities and videos through the existing discovery experience.</p>
+          <a class="btn" href="/discover.html">Explore</a>
+        </div>
+        <div class="side-card">
+          <p class="eyebrow">OPPORTUNITIES</p>
+          <h3>Creator campaigns</h3>
+          <p class="muted">Eligible opportunities become available after creator-program enrollment.</p>
+          <a class="btn primary" href="/creator.html">View campaigns</a>
+        </div>
+        <div class="side-card">
+          <p class="eyebrow">COMMERCE</p>
+          <h3>Shop & businesses</h3>
+          <p class="muted">Browse the existing VSBIL commerce system and business tools.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a class="btn green" href="/shop.html">Shop</a>
+            <a class="btn" href="/business.html">Business</a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="modal" id="postModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">PUBLISH</p>
+          <h2>Create post</h2>
+        </div>
+        <button class="close" id="closeModal" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="field">
+        <label for="postBody">Post</label>
+        <textarea id="postBody" maxlength="5000" placeholder="Share something with your community…"></textarea>
+      </div>
+      <div class="field">
+        <label for="postMedia">Image or video</label>
+        <input id="postMedia" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm">
+      </div>
+      <div id="preview" class="hidden" style="margin:12px 0;border-radius:14px;overflow:hidden;background:#0b111b;"></div>
+      <div class="modal-actions">
+        <button class="btn" id="cancelPost" type="button">Cancel</button>
+        <button class="btn primary" id="publish" type="button">Publish</button>
+      </div>
+      <p id="postMessage" class="muted" style="margin-top:10px;"></p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const token = () => localStorage.getItem("vsbil_access_token") || "";
+    const api = async (path, options = {}) => {
+      const headers = new Headers(options.headers || {});
+      headers.set("Accept", "application/json");
+      if (token()) headers.set("Authorization", `Bearer ${token()}`);
+      if (options.body && !(options.body instanceof FormData)) headers.set("Content-Type", "application/json");
+      const response = await fetch(path, { ...options, headers, credentials: "include" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Unable to complete request.");
+      return data;
+    };
+
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>\"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&#39;"
+    }[char]));
+
+    const toast = (message) => {
+      const element = document.getElementById("toast");
+      element.textContent = message;
+      element.classList.add("show");
+      setTimeout(() => element.classList.remove("show"), 2400);
+    };
+
+    const modal = document.getElementById("postModal");
+    const openComposer = () => {
+      if (!token()) {
+        location.href = "/login.html?next=/";
+        return;
+      }
+      modal.classList.add("open");
+      document.getElementById("postBody").focus();
+    };
+
+    const closeComposer = () => {
+      modal.classList.remove("open");
+      document.getElementById("postMessage").textContent = "";
+    };
+
+    ["composerTrigger", "composerPlus", "createPostSide"].forEach((id) => {
+      document.getElementById(id).addEventListener("click", openComposer);
+    });
+    document.getElementById("closeModal").addEventListener("click", closeComposer);
+    document.getElementById("cancelPost").addEventListener("click", closeComposer);
+
+    const renderPosts = (posts) => {
+      const feed = document.getElementById("feed");
+      if (!posts.length) {
+        feed.innerHTML = '<div class="section muted">No posts are available yet. Follow people or publish your first post.</div>';
+        return;
+      }
+
+      feed.innerHTML = posts.map((post) => {
+        const user = post.users || {};
+        const avatar = user.avatar_url
+          ? `<img src="${escapeHtml(user.avatar_url)}" alt="">`
+          : escapeHtml((user.username || "U").slice(0, 1).toUpperCase());
+        const media = post.media_url
+          ? post.media_type === "video"
+            ? `<video class="post-media" controls playsinline preload="metadata" src="${escapeHtml(post.media_url)}"></video>`
+            : `<img class="post-media" loading="lazy" src="${escapeHtml(post.media_url)}" alt="Post media">`
+          : "";
+
+        return `<article class="post" data-video="${post.media_type === "video"}">
+          <div class="post-head">
+            <div class="avatar">${avatar}</div>
+            <div>
+              <div class="post-user">${escapeHtml(user.username || "VSBIL User")}</div>
+              <div class="post-meta">${new Date(post.created_at).toLocaleString()}</div>
+            </div>
+          </div>
+          ${post.body ? `<div class="post-body">${escapeHtml(post.body)}</div>` : ""}
+          ${media}
+          <div class="post-actions">
+            <button type="button" data-like="${escapeHtml(post.id)}">♡ Like</button>
+            <button type="button" data-comment="${escapeHtml(post.id)}">Comment</button>
+            <button type="button" data-profile="${escapeHtml(user.username || "")}">View profile</button>
+          </div>
+        </article>`;
+      }).join("");
+
+      feed.querySelectorAll("[data-like]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          try {
+            await api(`/api/social/posts/${button.dataset.like}/like`, { method: "POST" });
+            button.textContent = "♥ Liked";
+            button.disabled = true;
+          } catch (error) {
+            toast(error.message);
+          }
+        });
+      });
+
+      feed.querySelectorAll("[data-comment]").forEach((button) => {
+        button.addEventListener("click", () => location.href = `/profile.html#post-${encodeURIComponent(button.dataset.comment)}`);
+      });
+
+      feed.querySelectorAll("[data-profile]").forEach((button) => {
+        button.addEventListener("click", () => {
+          if (button.dataset.profile) location.href = `/profile.html?u=${encodeURIComponent(button.dataset.profile)}`;
+        });
+      });
+    };
+
+    let feedLimit = 30;
+    let currentPosts = [];
+
+    async function loadFeed() {
+      if (!token()) {
+        document.getElementById("feed").innerHTML = '<div class="section muted">Log in to personalize your VSBIL feed.</div>';
+        document.getElementById("loadMore").disabled = true;
+        return;
+      }
+
+      document.getElementById("loadMore").disabled = true;
+      try {
+        const data = await api(`/api/social/feed?limit=${feedLimit}`);
+        currentPosts = data.posts || [];
+        renderPosts(currentPosts);
+      } catch (error) {
+        document.getElementById("feed").innerHTML = '<div class="section muted">Your feed is temporarily unavailable.</div>';
+        toast(error.message);
+      } finally {
+        document.getElementById("loadMore").disabled = false;
+      }
+    }
+
+    async function loadProfileAvatar() {
+      if (!token()) return;
+      try {
+        const data = await api("/api/users/profile");
+        const user = data.user || {};
+        const avatar = user.avatar_url
+          ? `<img src="${escapeHtml(user.avatar_url)}" alt="Your profile">`
+          : escapeHtml((user.username || "U").slice(0, 1).toUpperCase());
+        document.getElementById("topAvatar").innerHTML = avatar;
+        document.getElementById("composerAvatar").innerHTML = avatar;
+      } catch {
+        // The public shell remains usable if profile enrichment fails.
+      }
+    }
+
+    document.getElementById("refresh").addEventListener("click", () => loadFeed());
+    document.getElementById("loadMore").addEventListener("click", () => {
+      feedLimit = Math.min(feedLimit + 30, 100);
+      loadFeed();
+    });
+
+    document.querySelectorAll(".feed-tabs button").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".feed-tabs button").forEach((item) => item.classList.remove("active"));
+        button.classList.add("active");
+        const kind = button.dataset.kind;
+        document.querySelectorAll(".post").forEach((post) => {
+          post.style.display = kind === "video" ? (post.dataset.video === "true" ? "" : "none") : "";
+        });
+        if (kind === "campaign") location.href = "/creator.html";
+      });
+    });
+
+    document.getElementById("postMedia").addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      const preview = document.getElementById("preview");
+      preview.innerHTML = "";
+      preview.classList.add("hidden");
+      if (!file) return;
+      if (file.size > 6 * 1024 * 1024) {
+        document.getElementById("postMessage").textContent = "Media must be smaller than 6 MB.";
+        event.target.value = "";
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      preview.innerHTML = file.type.startsWith("video/")
+        ? `<video controls muted playsinline style="width:100%;max-height:390px;object-fit:contain" src="${url}"></video>`
+        : `<img style="width:100%;max-height:390px;object-fit:contain" src="${url}" alt="Preview">`;
+      preview.classList.remove("hidden");
+    });
+
+    document.getElementById("publish").addEventListener("click", async () => {
+      const message = document.getElementById("postMessage");
+      const body = document.getElementById("postBody").value.trim();
+      const file = document.getElementById("postMedia").files[0];
+      message.textContent = "Publishing…";
+
+      try {
+        if (!body && !file) throw new Error("Add text or media to publish.");
+        let mediaUrl = null;
+        let mediaType = null;
+
+        if (file) {
+          const reader = new FileReader();
+          const dataUrl = await new Promise((resolve, reject) => {
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject(new Error("Unable to read media."));
+            reader.readAsDataURL(file);
+          });
+          const upload = await api("/api/social/upload", {
+            method: "POST",
+            body: JSON.stringify({ dataUrl, mediaType: file.type })
+          });
+          mediaUrl = upload.url;
+          mediaType = file.type.split("/")[0];
+        }
+
+        await api("/api/social/posts", {
+          method: "POST",
+          body: JSON.stringify({ body, mediaUrl, mediaType, visibility: "public" })
+        });
+
+        document.getElementById("postBody").value = "";
+        document.getElementById("postMedia").value = "";
+        document.getElementById("preview").innerHTML = "";
+        document.getElementById("preview").classList.add("hidden");
+        closeComposer();
+        feedLimit = 30;
+        await loadFeed();
+        toast("Post published");
+      } catch (error) {
+        message.textContent = error.message;
+      }
+    });
+
+    document.getElementById("menuButton").addEventListener("click", () => {
+      document.getElementById("sidebar").classList.toggle("open");
+    });
+
+    loadProfileAvatar().then(loadFeed);
+  </script>
+</body>
+</html>
