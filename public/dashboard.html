@@ -11,13 +11,8 @@
   <div class="app">
     <header class="topbar">
       <button class="icon mobile-menu" id="menuButton" aria-label="Open menu">☰</button>
-      <a class="brand" href="/">
-        <img src="/assets/vsbil-logo.svg" alt="VSBIL">
-        <span>VSBIL</span>
-      </a>
-      <div class="top-search">
-        <input id="search" type="search" placeholder="Search your workspace">
-      </div>
+      <a class="brand" href="/"><img src="/assets/vsbil-logo.svg" alt="VSBIL"><span>VSBIL</span></a>
+      <div class="top-search"><input id="search" type="search" placeholder="Search your workspace"></div>
       <div class="top-actions">
         <button class="icon" type="button" onclick="location.href='/notifications.html'" aria-label="Notifications">♢</button>
         <a class="avatar" id="avatar" href="/profile.html" aria-label="Your profile">U</a>
@@ -26,251 +21,124 @@
 
     <div class="shell">
       <aside class="sidebar" id="sidebar">
-        <nav class="nav">
-          <div class="nav-links">
-            <a href="/"><b>⌂</b><span>Home</span></a>
-            <a href="/discover.html"><b>◎</b><span>For You</span></a>
-            <a class="active" href="/dashboard.html"><b>▦</b><span>Dashboard</span></a>
-            <a href="/profile.html"><b>●</b><span>Profile</span></a>
-            <a href="/creator.html"><b>◈</b><span>Campaigns</span></a>
-            <a href="/shop-admin.html"><b>◇</b><span>Shop Manager</span></a>
-            <a href="/business.html"><b>▤</b><span>Business</span></a>
-            <a href="/whatsapp-bot.html"><b>◉</b><span>WhatsApp</span></a>
-            <a href="/messages.html"><b>✉</b><span>Messages</span></a>
-            <a href="/notifications.html"><b>♢</b><span>Notifications</span></a>
-            <a href="/settings.html"><b>⚙</b><span>Settings</span></a>
-          </div>
-        </nav>
+        <nav class="nav"><div class="nav-links">
+          <a href="/"><b>⌂</b><span>Home</span></a>
+          <a href="/discover.html"><b>◎</b><span>For You</span></a>
+          <a class="active" href="/dashboard.html"><b>▦</b><span>Dashboard</span></a>
+          <a href="/profile.html"><b>●</b><span>Profile</span></a>
+          <a href="/creator.html"><b>◈</b><span>Campaigns</span></a>
+          <a href="/shop-admin.html"><b>◇</b><span>Shop Manager</span></a>
+          <a href="/business.html"><b>▤</b><span>Business</span></a>
+          <a href="/whatsapp-bot.html"><b>◉</b><span>WhatsApp</span></a>
+          <a href="/messages.html"><b>✉</b><span>Messages</span></a>
+          <a href="/notifications.html"><b>♢</b><span>Notifications</span></a>
+          <a href="/settings.html"><b>⚙</b><span>Settings</span></a>
+        </div></nav>
       </aside>
 
       <main>
         <section class="section card">
           <p class="eyebrow">CREATOR & BUSINESS CENTER</p>
           <div class="section-head">
-            <div>
-              <h1>Dashboard</h1>
-              <p class="muted">A private workspace for your earnings, activity, campaigns and business operations.</p>
-            </div>
-            <div class="profile-actions">
-              <a class="btn primary" href="/creator.html">Manage campaigns</a>
-              <a class="btn" href="/profile.html">View profile</a>
-            </div>
+            <div><h1>Dashboard</h1><p class="muted">Your private workspace for earnings, campaigns, activity and business operations.</p></div>
+            <div class="profile-actions"><a class="btn primary" href="/creator.html">Manage campaigns</a><a class="btn" href="/profile.html">View profile</a></div>
           </div>
         </section>
 
         <section class="grid">
-          <div class="card stat">
-            <span class="muted">Available balance</span>
-            <strong id="available">₵0.00</strong>
-            <small class="muted">Ready for payout</small>
-          </div>
-          <div class="card stat">
-            <span class="muted">Pending</span>
-            <strong id="pending">₵0.00</strong>
-            <small class="muted">Awaiting approval</small>
-          </div>
-          <div class="card stat">
-            <span class="muted">Total earned</span>
-            <strong id="earned">₵0.00</strong>
-            <small class="muted">Lifetime approved earnings</small>
-          </div>
-          <div class="card stat">
-            <span class="muted">Completed</span>
-            <strong id="completed">0</strong>
-            <small class="muted">Verified activities</small>
-          </div>
+          <div class="card stat"><span class="muted">Available balance</span><strong id="available">₵0.00</strong><small class="muted">Ready for payout</small></div>
+          <div class="card stat"><span class="muted">Pending</span><strong id="pending">₵0.00</strong><small class="muted">Awaiting approval</small></div>
+          <div class="card stat"><span class="muted">Total earned</span><strong id="earned">₵0.00</strong><small class="muted">Lifetime approved earnings</small></div>
+          <div class="card stat"><span class="muted">Completed</span><strong id="completed">0</strong><small class="muted">Verified activities</small></div>
+        </section>
+
+        <section class="grid">
+          <div class="card stat"><span class="muted">My campaigns</span><strong id="campaignTotal">0</strong><small id="campaignActive" class="muted">0 active</small></div>
+          <div class="card stat"><span class="muted">Campaigns completed</span><strong id="campaignCompleted">0</strong><small class="muted">Closed or completed</small></div>
+          <div class="card stat"><span class="muted">My shops</span><strong id="shopCount">0</strong><small class="muted">Connected commerce stores</small></div>
+          <div class="card stat"><span class="muted">Referral earnings</span><strong id="referralEarnings">₵0.00</strong><small id="referralCountStat" class="muted">0 referrals</small></div>
         </section>
 
         <section class="card section">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">MANAGEMENT</p>
-              <h2>Workspace</h2>
-            </div>
-          </div>
+          <div class="section-head"><div><p class="eyebrow">MANAGEMENT</p><h2>Workspace</h2></div></div>
           <div class="cards" style="margin-top:16px;">
-            <a class="tool-card" href="/creator.html">
-              <h3>Campaign Management</h3>
-              <p class="muted">Create campaigns, review participation and monitor performance.</p>
-            </a>
-            <a class="tool-card" href="/earnings.html">
-              <h3>Wallet & Payouts</h3>
-              <p class="muted">Open the existing wallet, payout methods and earnings history.</p>
-            </a>
-            <a class="tool-card" href="/business.html">
-              <h3>Business Tools</h3>
-              <p class="muted">Use the existing invoices, inventory, property and business records.</p>
-            </a>
-            <a class="tool-card" href="/shop-admin.html">
-              <h3>Shop Manager</h3>
-              <p class="muted">Manage the existing VSBIL commerce storefront and products.</p>
-            </a>
-            <a class="tool-card" href="/whatsapp-bot.html">
-              <h3>WhatsApp</h3>
-              <p class="muted">Manage the existing connected WhatsApp Business automation.</p>
-            </a>
-            <a class="tool-card" href="/activities.html">
-              <h3>Activity Log</h3>
-              <p class="muted">Review your account and earning activity.</p>
-            </a>
+            <a class="tool-card" href="/creator.html"><h3>Campaign Management</h3><p class="muted">Create campaigns, review participation and monitor performance.</p></a>
+            <a class="tool-card" href="/earnings.html"><h3>Wallet & Payouts</h3><p class="muted">Open your wallet, payout methods and earnings history.</p></a>
+            <a class="tool-card" href="/business.html"><h3>Business Tools</h3><p class="muted">Use invoices, inventory, property and business records.</p></a>
+            <a class="tool-card" href="/shop-admin.html"><h3>Shop Manager</h3><p class="muted">Manage your existing commerce storefront and products.</p></a>
+            <a class="tool-card" href="/whatsapp-bot.html"><h3>WhatsApp</h3><p class="muted">Manage your connected WhatsApp Business automation.</p></a>
+            <a class="tool-card" href="/activities.html"><h3>Activity Log</h3><p class="muted">Review account, campaign and earning activity.</p></a>
           </div>
         </section>
 
         <section class="card section">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">PERFORMANCE</p>
-              <h2>Recent activity</h2>
-            </div>
-            <a class="btn" href="/activities.html">View activity</a>
-          </div>
-          <div id="recent" class="list" style="margin-top:12px;">
-            <div class="list-row"><span class="muted">Loading activity…</span></div>
-          </div>
+          <div class="section-head"><div><p class="eyebrow">PERFORMANCE</p><h2>Recent activity</h2></div><a class="btn" href="/activities.html">View activity</a></div>
+          <div id="recent" class="list" style="margin-top:12px;"><div class="list-row"><span class="muted">Loading activity…</span></div></div>
         </section>
 
         <section class="card section">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">REFERRALS</p>
-              <h2>Referral program</h2>
-              <p class="muted">Share your personal referral link.</p>
-            </div>
-            <strong id="referralCount">0 referrals</strong>
-          </div>
-          <div class="field">
-            <label for="ref">Referral link</label>
-            <input id="ref" readonly placeholder="Loading referral link…">
-          </div>
-          <div class="profile-actions">
-            <button class="btn primary" id="copy" type="button">Copy referral link</button>
-            <a class="btn" href="/profile.html#referral">Open profile</a>
-          </div>
+          <div class="section-head"><div><p class="eyebrow">REFERRALS</p><h2>Referral program</h2><p class="muted">Share your personal referral link.</p></div><strong id="referralCount">0 referrals</strong></div>
+          <div class="field"><label for="ref">Referral link</label><input id="ref" readonly placeholder="Loading referral link…"></div>
+          <div class="profile-actions"><button class="btn primary" id="copy" type="button">Copy referral link</button><a class="btn" href="/profile.html#referral">Open profile</a></div>
         </section>
       </main>
 
       <aside class="right">
-        <div class="side-card">
-          <p class="eyebrow">ACCOUNT</p>
-          <h3>Creator Programs</h3>
-          <p class="muted">Enrollment and monetization controls are managed from the full Settings Center.</p>
-          <a class="btn primary" href="/settings.html#creator">Manage account</a>
-        </div>
-        <div class="side-card">
-          <p class="eyebrow">DISCOVERY</p>
-          <h3>Opportunities</h3>
-          <p class="muted">Find active campaigns and eligible opportunities.</p>
-          <a class="btn" href="/discover.html">Discover</a>
-        </div>
+        <div class="side-card"><p class="eyebrow">ACCOUNT</p><h3>Creator Programs</h3><p class="muted">Enrollment and monetization controls are managed from the full Settings Center.</p><a class="btn primary" href="/settings.html#creator">Manage account</a></div>
+        <div class="side-card"><p class="eyebrow">DISCOVERY</p><h3>Opportunities</h3><p class="muted">Find active campaigns and eligible opportunities.</p><a class="btn" href="/discover.html">Discover</a></div>
       </aside>
     </div>
   </div>
 
   <div class="toast" id="toast"></div>
-
   <script>
     const token = () => localStorage.getItem("vsbil_access_token") || "";
-
     async function api(path) {
-      const response = await fetch(path, {
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${token()}`
-        },
-        credentials: "include"
-      });
-
+      const response = await fetch(path, { headers: { Accept: "application/json", Authorization: `Bearer ${token()}` }, credentials: "include" });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.message || "Unable to load this section.");
       return data;
     }
-
     const money = (value) => `₵${Number(value || 0).toFixed(2)}`;
-
-    const toast = (message) => {
-      const element = document.getElementById("toast");
-      element.textContent = message;
-      element.classList.add("show");
-      setTimeout(() => element.classList.remove("show"), 2200);
-    };
+    const toast = (message) => { const element = document.getElementById("toast"); element.textContent = message; element.classList.add("show"); setTimeout(() => element.classList.remove("show"), 2200); };
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>\"']/g, (char) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "\"":"&quot;", "'":"&#39;" }[char]));
 
     async function loadDashboard() {
-      if (!token()) {
-        location.href = "/login.html?next=/dashboard.html";
-        return;
-      }
-
+      if (!token()) { location.href = "/login.html?next=/dashboard.html"; return; }
       try {
         const data = await api("/api/dashboard");
-        const wallet = data.wallet || {};
-        const activity = data.activity || {};
-
+        const wallet = data.wallet || {}, activity = data.activity || {}, referrals = data.referrals || {}, campaigns = data.campaigns || {}, business = data.business || {};
         document.getElementById("available").textContent = money(wallet.available);
         document.getElementById("pending").textContent = money(wallet.pending);
         document.getElementById("earned").textContent = money(wallet.totalEarned);
         document.getElementById("completed").textContent = String(activity.completed || 0);
-
-        const recent = activity.recent || [];
-        document.getElementById("recent").innerHTML = recent.length
-          ? recent.slice(0, 12).map((item) => {
-              const activityInfo = item.activities || {};
-              return `<div class="list-row">
-                <div>
-                  <strong>${escapeHtml(activityInfo.title || "Activity")}</strong>
-                  <div class="muted">${escapeHtml(activityInfo.platform || "VSBIL")} · ${new Date(item.created_at).toLocaleString()}</div>
-                </div>
-                <strong>${money(item.reward_amount)}</strong>
-              </div>`;
-            }).join("")
-          : '<div class="list-row"><span class="muted">No recent activity yet.</span></div>';
-
-        const referrals = await api("/api/users/referrals");
-        const code = referrals.referralCode || "";
-        document.getElementById("ref").value = code
-          ? `${location.origin}/register.html?ref=${encodeURIComponent(code)}`
-          : "";
+        document.getElementById("campaignTotal").textContent = String(campaigns.total || 0);
+        document.getElementById("campaignActive").textContent = `${Number(campaigns.active || 0)} active`;
+        document.getElementById("campaignCompleted").textContent = String(campaigns.completed || 0);
+        document.getElementById("shopCount").textContent = String(business.shops || 0);
+        document.getElementById("referralEarnings").textContent = money(referrals.earnings);
+        document.getElementById("referralCountStat").textContent = `${Number(referrals.count || 0)} referrals`;
         document.getElementById("referralCount").textContent = `${Number(referrals.count || 0)} referrals`;
-
+        const recent = activity.recent || [];
+        document.getElementById("recent").innerHTML = recent.length ? recent.slice(0, 12).map((item) => {
+          const info = item.activities || {};
+          return `<div class="list-row"><div><strong>${escapeHtml(info.title || "Activity")}</strong><div class="muted">${escapeHtml(info.platform || "VSBIL")} · ${new Date(item.created_at).toLocaleString()}</div></div><strong>${money(item.reward_amount)}</strong></div>`;
+        }).join("") : '<div class="list-row"><span class="muted">No recent activity yet.</span></div>';
+        const code = referrals.referralCode || "";
+        document.getElementById("ref").value = code ? `${location.origin}/register.html?ref=${encodeURIComponent(code)}` : "";
         const profile = await api("/api/users/profile");
         if (profile.user?.avatar_url) {
-          const image = document.createElement("img");
-          image.src = profile.user.avatar_url;
-          image.alt = "Profile";
-          document.getElementById("avatar").replaceChildren(image);
+          const image = document.createElement("img"); image.src = profile.user.avatar_url; image.alt = "Profile"; document.getElementById("avatar").replaceChildren(image);
         }
       } catch (error) {
         document.getElementById("recent").innerHTML = `<div class="list-row"><span class="muted">${escapeHtml(error.message)}</span></div>`;
       }
     }
-
-    function escapeHtml(value) {
-      return String(value ?? "").replace(/[&<>\"']/g, (char) => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        "\"": "&quot;",
-        "'": "&#39;"
-      }[char]));
-    }
-
     document.getElementById("copy").addEventListener("click", async () => {
-      const input = document.getElementById("ref");
-      if (!input.value) return toast("Referral link is not available yet.");
-
-      try {
-        await navigator.clipboard.writeText(input.value);
-        toast("Referral link copied");
-      } catch {
-        input.select();
-        document.execCommand("copy");
-        toast("Referral link copied");
-      }
+      const input = document.getElementById("ref"); if (!input.value) return toast("Referral link is not available yet.");
+      try { await navigator.clipboard.writeText(input.value); toast("Referral link copied"); } catch { input.select(); document.execCommand("copy"); toast("Referral link copied"); }
     });
-
-    document.getElementById("menuButton").addEventListener("click", () => {
-      document.getElementById("sidebar").classList.toggle("open");
-    });
-
+    document.getElementById("menuButton").addEventListener("click", () => document.getElementById("sidebar").classList.toggle("open"));
     loadDashboard();
   </script>
 </body>
