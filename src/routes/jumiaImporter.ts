@@ -1,49 +1,91 @@
 import { Router, type Request, type Response } from "express";
 import crypto from "node:crypto";
 import { supabase } from "../config/supabase.js";
-import { requireAdmin, requireIdentity } from "../middleware/authMiddleware.js";
+import { requireAuth, requireAdmin } from "../middleware/authMiddleware.js";
 
 const router = Router();
-const MAX_IMAGES = 5;
+const JUMIA_HOSTS = new Set(["jumia.com.gh", "www.jumia.com.gh"]);
 const CACHE_HOURS = 6;
-const moneyFromText = (value: string | null): number | null => {
-  if (!value) return null;
-  const cleaned = value.replace(/[^0-9.,]/g, "").replace(/,/g, "");
-  const n = Number(cleaned);
-  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
-};
-const text = (value: unknown, max = 5000) => typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
+const MAX_IMAGES = 5;
+const FETCH_TIMEOUT_MS = 12_000;
+const CRON_SECRET = process.env.CRON_SECRET?.trim() || "";
 
-function validJumiaUrl(raw: unknown): URL | null {
+type ImportedProduct = {
+  title: string;
+  description: string;
+  shortDescription: string;
+  price: number;
+  originalPrice: number | null;
+  images: string[];
+  inStock: boolean;
+  sourceUrl: string;
+  currency: "GHS";
+  productId: string;
+};
+
+const clean = (value: unknown, max = 5000): string =>
+  typeof value === "string" ? value.trim().slice(0, max) : "";
+
+function validJumiaUrl(value: unknown): URL | null {
   try {
-    const url = new URL(String(raw ?? ""));
-    if (url.protocol !== "https:" || url.hostname.toLowerCase() !== "www.jumia.com.gh") return null;
+    const url = new URL(String(value || "").trim());
+    if (url.protocol !== "https:") return null;
+    if (!JUMIA_HOSTS.has(url.hostname.toLowerCase())) return null;
     return url;
   } catch {
     return null;
   }
 }
 
-function productKey(url: URL): string {
-  const parts = url.pathname.split("/").filter(Boolean);
-  return parts.at(-1)?.replace(/\.html?$/i, "") || crypto.createHash("sha256").update(url.toString()).digest("hex").slice(0, 24);
+function productIdFromUrl(url: URL): string {
+  const path = decodeURIComponent(url.pathname);
+  const numericMatches = path.match(/[0-9]{6,}/g);
+  return numericMatches?.at(-1) || crypto.createHash("sha256").update(url.toString()).digest("hex").slice(0, 32);
 }
 
-function meta(html: string, property: string): string | null {
-  const escaped = property.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(`<meta[^>]+(?:property|name)=["']${escaped}["'][^>]+content=["']([^"']+)["'][^>]*>`, "i");
-  return pattern.exec(html)?.[1] ?? null;
+function htmlDecode(value: string): string {
+  return value
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#x2F;|&#47;/gi, "/")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function elementText(html: string, selector: string): string | null {
-  const pattern = new RegExp(`<[^>]+(?:${selector})[^>]*>([^<]{1,300})<`, "i");
-  return pattern.exec(html)?.[1]?.trim() ?? null;
+function meta(html: string, key: string): string {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const patterns = [
+    new RegExp(`<meta[^>]+(?:property|name)=["']${escaped}["'][^>]+content=["']([^"']*)["'][^>]*>`, "i"),
+    new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]+(?:property|name)=["']${escaped}["'][^>]*>`, "i"),
+  ];
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (match?.[1]) return htmlDecode(match[1]);
+  }
+  return "";
 }
 
-function absoluteImage(value: string): string | null {
+function elementText(html: string, selectorHint: string): string {
+  const pattern = new RegExp(`<[^>]*${selectorHint}[^>]*>([\\s\\S]*?)<\\/[^>]+>`, "i");
+  const match = html.match(pattern);
+  return match?.[1] ? htmlDecode(match[1].replace(/<[^>]+>/g, " ")) : "";
+}
+
+function moneyFromText(value: string): number | null {
+  const cleaned = value.replace(/[^0-9.,]/g, "").replace(/,/g, "");
+  const n = Number(cleaned);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null;
+}
+
+function absoluteImage(raw: string): string | null {
+  const value = htmlDecode(raw).replace(/\\u002F/g, "/").trim();
+  if (!value || value.startsWith("data:")) return null;
   try {
-    const url = new URL(value.replace(/&amp;/g, "&"), "https://www.jumia.com.gh");
-    if (!/^https?:$/i.test(url.protocol)) return null;
+    const url = new URL(value, "https://www.jumia.com.gh");
+    if (url.protocol !== "https:") return null;
     return url.toString().replace(/_300x300(?=\.[a-z0-9]+(?:\?|$))/i, "_1000x1000");
   } catch {
     return null;
@@ -75,64 +117,64 @@ function extractPrice(html: string, original = false): number | null {
     if (n !== null) return n;
   }
   const priceMatch = html.match(/(?:class=["'][^"']*prc[^"']*["'][^>]*>)([^<]+)/i);
-  return moneyFromText(priceMatch?.[1] ?? null);
+  return priceMatch?.[1] ? moneyFromText(priceMatch[1]) : null;
 }
 
-function extractProduct(html: string, sourceUrl: string) {
-  const title = text(elementText(html, "<h1") || meta(html, "og:title") || meta(html, "title"), 300);
-  const description = text(meta(html, "description") || meta(html, "og:description") || elementText(html, "description"), 5000);
-  const price = extractPrice(html);
-  const originalPrice = extractPrice(html, true);
-  const images = extractImages(html);
-  const inStock = !/(out of stock|currently unavailable|not available)/i.test(html);
-  return { title, description, shortDescription: description.slice(0, 280), price, originalPrice, images, inStock, sourceUrl, currency: "GHS" };
+function extractStock(html: string): boolean {
+  const text = htmlDecode(html.replace(/<[^>]+>/g, " ")).toLowerCase();
+  if (/out of stock|currently unavailable|sold out|not available/.test(text)) return false;
+  if (/in stock|available|add to cart|buy now/.test(text)) return true;
+  return true;
 }
 
-router.post("/", requireIdentity, requireAdmin, async (req: Request, res: Response) => {
+async function fetchProduct(sourceUrl: string): Promise<ImportedProduct> {
+  const url = validJumiaUrl(sourceUrl);
+  if (!url) throw new Error("Only secure Jumia Ghana product links are supported");
+  const productId = productIdFromUrl(url);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const url = validJumiaUrl(req.body?.url);
-    if (!url) return res.status(400).json({ success: false, message: "Only https://www.jumia.com.gh product links are supported." });
-    const key = productKey(url);
-    const { data: cached } = await supabase.from("jumia_import_cache").select("payload,expires_at").eq("product_key", key).maybeSingle();
-    if (cached && new Date(cached.expires_at) > new Date()) return res.json({ success: true, cached: true, product: cached.payload });
-
-    const response = await fetch(url, { headers: { "User-Agent": "VSBIL Commerce Importer/1.0", Accept: "text/html,application/xhtml+xml" }, redirect: "follow" });
-    if (!response.ok) return res.status(502).json({ success: false, message: `Jumia returned HTTP ${response.status}.` });
+    const response = await fetch(url.toString(), {
+      signal: controller.signal,
+      headers: { Accept: "text/html,application/xhtml+xml", "User-Agent": "VSBIL Product Importer/1.0 (+https://vsbil.onrender.com)" },
+    });
+    if (!response.ok) throw new Error(`Jumia returned HTTP ${response.status}`);
     const html = await response.text();
-    const product = extractProduct(html, url.toString());
-    if (!product.title || product.price === null) return res.status(422).json({ success: false, message: "The product details could not be extracted reliably." });
-    const expiresAt = new Date(Date.now() + CACHE_HOURS * 60 * 60 * 1000).toISOString();
-    await supabase.from("jumia_import_cache").upsert({ product_key: key, source_url: url.toString(), payload: product, expires_at: expiresAt }, { onConflict: "product_key" });
-    return res.json({ success: true, cached: false, product });
-  } catch (error) {
-    console.error("Jumia import", error);
-    return res.status(500).json({ success: false, message: "Unable to import the Jumia product." });
-  }
-});
+    if (html.length < 500) throw new Error("Jumia returned an incomplete product page");
+    const title = meta(html, "og:title") || elementText(html, "<h1") || meta(html, "twitter:title");
+    const description = meta(html, "og:description") || meta(html, "description") || elementText(html, "description");
+    const price = extractPrice(html, false);
+    const originalPrice = extractPrice(html, true);
+    if (!title || price === null) throw new Error("Could not reliably extract the product title and price from Jumia");
+    const images = extractImages(html);
+    return { title: title.slice(0, 250), description: description.slice(0, 5000), shortDescription: description.slice(0, 300), price, originalPrice: originalPrice && originalPrice > price ? originalPrice : null, images, inStock: extractStock(html), sourceUrl: url.toString(), currency: "GHS", productId };
+  } finally { clearTimeout(timeout); }
+}
 
-router.post("/publish", requireIdentity, requireAdmin, async (req: Request, res: Response) => {
-  try {
-    const sourceUrl = validJumiaUrl(req.body?.sourceUrl);
-    const title = text(req.body?.title, 300);
-    const description = text(req.body?.description, 5000);
-    const images = Array.isArray(req.body?.images) ? req.body.images.map((v: unknown) => String(v)).filter((v: string) => /^https?:\/\//i.test(v)).slice(0, MAX_IMAGES) : [];
-    const price = moneyFromText(String(req.body?.price ?? ""));
-    if (!sourceUrl || !title || price === null) return res.status(400).json({ success: false, message: "A valid Jumia source, title and price are required." });
-    const affiliateLink = sourceUrl.toString();
-    const { data, error } = await supabase.from("business_products").insert({ name: title, description, price, images, affiliate_link: affiliateLink, source: "jumia", source_url: sourceUrl.toString(), status: "active" }).select().single();
-    if (error) return res.status(400).json({ success: false, message: error.message });
-    return res.status(201).json({ success: true, product: data });
-  } catch (error) {
-    console.error("Jumia publish", error);
-    return res.status(500).json({ success: false, message: "Unable to publish the imported product." });
-  }
-});
+async function cachedProduct(sourceUrl: string): Promise<ImportedProduct> {
+  const url = validJumiaUrl(sourceUrl);
+  if (!url) throw new Error("Only secure Jumia Ghana product links are supported");
+  const productId = productIdFromUrl(url);
+  const { data: cached } = await supabase.from("jumia_import_cache").select("payload,fetched_at").eq("product_id", productId).maybeSingle();
+  if (cached?.payload && cached.fetched_at && Date.now() - new Date(cached.fetched_at).getTime() < CACHE_HOURS * 60 * 60 * 1000) return cached.payload as ImportedProduct;
+  const product = await fetchProduct(url.toString());
+  await supabase.from("jumia_import_cache").upsert({ product_id: productId, source_url: product.sourceUrl, payload: product, fetched_at: new Date().toISOString(), updated_at: new Date().toISOString() }, { onConflict: "product_id" });
+  return product;
+}
+
+function officialAffiliateUrl(sourceUrl: string, tag: string): string { const url = new URL(sourceUrl); if (tag) url.searchParams.set("kol_id", tag); return url.toString(); }
+
+router.get("/shops", requireAuth, requireAdmin, async (_req, res) => { const { data, error } = await supabase.from("business_shops").select("id,name,store_slug,is_published").order("created_at", { ascending: false }).limit(100); if (error) return res.status(500).json({ success: false, message: "Unable to load shops" }); return res.json({ success: true, shops: data ?? [] }); });
+
+router.post("/fetch", requireAuth, requireAdmin, async (req, res) => { try { const sourceUrl = clean(req.body?.url, 2000); if (!validJumiaUrl(sourceUrl)) return res.status(400).json({ success: false, message: "Paste a valid HTTPS Jumia Ghana product link" }); const product = await cachedProduct(sourceUrl); return res.json({ success: true, product, cachedForHours: CACHE_HOURS }); } catch (error) { console.error("Jumia import fetch", error); return res.status(502).json({ success: false, message: error instanceof Error ? error.message : "Unable to fetch Jumia product" }); } });
+
+router.post("/publish", requireAuth, requireAdmin, async (req, res) => { try { const shopId = clean(req.body?.shopId, 80); const sourceUrl = clean(req.body?.sourceUrl, 2000); const title = clean(req.body?.title, 250); const description = clean(req.body?.description, 5000); const images = Array.isArray(req.body?.images) ? req.body.images.filter((x: unknown): x is string => typeof x === "string").map((x: string) => absoluteImage(x)).filter((x): x is string => Boolean(x)).slice(0, MAX_IMAGES) : []; const price = Number(req.body?.price); const originalPrice = req.body?.originalPrice == null ? null : Number(req.body.originalPrice); const affiliateTag = clean(req.body?.affiliateTag, 100); if (!shopId || !validJumiaUrl(sourceUrl) || !title || !Number.isFinite(price) || price < 0 || !images.length) return res.status(400).json({ success: false, message: "Shop, source URL, title, price and at least one image are required" }); const { data: shop } = await supabase.from("business_shops").select("id,name,affiliate_link").eq("id", shopId).eq("user_id", req.user!.id).maybeSingle(); if (!shop) return res.status(404).json({ success: false, message: "Official shop not found" }); const sourceId = productIdFromUrl(new URL(sourceUrl)); const affiliateLink = shop.affiliate_link || officialAffiliateUrl(sourceUrl, affiliateTag || process.env.VSBIL_JUMIA_KOL_ID?.trim() || ""); const payload = { id: crypto.randomUUID(), user_id: req.user!.id, shop_id: shop.id, name: title, sku: `JUMIA-${sourceId}`.slice(0, 80), description, image_url: images[0], image_urls: images, selling_price: Math.round(price * 100) / 100, original_price: Number.isFinite(originalPrice) && Number(originalPrice) > price ? Number(originalPrice) : null, discount_percent: Number.isFinite(originalPrice) && Number(originalPrice) > price ? Math.min(100, Math.max(0, Math.round((1 - price / Number(originalPrice)) * 10000) / 100)) : 0, quantity: 0, unit: "piece", is_published: true, source: "jumia", source_url: sourceUrl, source_product_id: sourceId, source_currency: "GHS", source_in_stock: Boolean(req.body?.inStock), last_synced_at: new Date().toISOString(), affiliate_link: affiliateLink || null }; const { data, error } = await supabase.from("inventory_products").upsert(payload, { onConflict: "shop_id,source,source_product_id" }).select().single(); if (error) return res.status(400).json({ success: false, message: error.message }); return res.status(201).json({ success: true, product: data }); } catch (error) { console.error("Jumia publish", error); return res.status(500).json({ success: false, message: "Unable to publish imported product" }); } });
+
+async function syncPrices(): Promise<{ scanned: number; updated: number; failed: number }> { const { data: products, error } = await supabase.from("inventory_products").select("id,source_url,source_product_id,selling_price,original_price").eq("source", "jumia").not("source_url", "is", null).limit(1000); if (error) throw error; let updated = 0; let failed = 0; for (const product of products ?? []) { try { const imported = await cachedProduct(String(product.source_url)); const patch = { selling_price: imported.price, original_price: imported.originalPrice, source_in_stock: imported.inStock, last_synced_at: new Date().toISOString(), image_url: imported.images[0] || null, image_urls: imported.images }; const { error: updateError } = await supabase.from("inventory_products").update(patch).eq("id", product.id).eq("source", "jumia"); if (updateError) throw updateError; updated += 1; } catch (error) { failed += 1; console.error("Jumia price sync failed", product.id, error); } } return { scanned: products?.length ?? 0, updated, failed }; }
+
+router.post("/sync", requireAuth, requireAdmin, async (_req, res) => { try { return res.json({ success: true, result: await syncPrices() }); } catch (error) { console.error("Jumia manual sync", error); return res.status(500).json({ success: false, message: "Unable to sync Jumia products" }); } });
 
 export const cronRouter = Router();
-cronRouter.post("/sync-jumia-prices", async (req: Request, res: Response) => {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || req.headers["x-cron-secret"] !== secret) return res.status(401).json({ success: false, message: "Unauthorized" });
-  return res.json({ success: true, message: "Jumia price sync endpoint is protected and ready." });
-});
+cronRouter.post("/sync-jumia-prices", async (req: Request, res: Response) => { if (!CRON_SECRET || req.header("x-cron-secret") !== CRON_SECRET) return res.status(401).json({ success: false, message: "Unauthorized" }); try { return res.json({ success: true, result: await syncPrices() }); } catch (error) { console.error("Jumia cron sync", error); return res.status(500).json({ success: false, message: "Jumia price sync failed" }); } });
 
 export default router;
