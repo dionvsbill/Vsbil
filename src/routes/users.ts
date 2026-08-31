@@ -21,7 +21,7 @@ router.get("/referrals", async (req, res) => {
 });
 
 router.get("/profile", async (req, res) => {
-  const { data, error } = await supabase.from("users").select("id,email,username,role,status,referral_code,bio,avatar_url,cover_url,account_visibility,discoverable,created_at,updated_at,email_verified_at,google_verified_at,phone_verified_at,last_login_at,last_active_at,suspended_at,suspension_reason,content_participant").eq("id", req.user!.id).single();
+  const { data, error } = await supabase.from("users").select("id,email,username,role,status,referral_code,bio,avatar_url,cover_url,account_visibility,discoverable,allow_direct_messages,created_at,updated_at,email_verified_at,google_verified_at,phone_verified_at,last_login_at,last_active_at,suspended_at,suspension_reason,content_participant").eq("id", req.user!.id).single();
   if (error) return res.status(500).json({ success: false, message: "Unable to load profile" });
   return res.json({ success: true, user: data });
 });
@@ -32,8 +32,9 @@ router.patch("/profile", async (req: Request, res: Response) => {
   const patch: Record<string, unknown> = { username, updated_at: new Date().toISOString() };
   if (req.body?.bio !== undefined) patch.bio = cleanText(req.body.bio, 300);
   if (["public", "private"].includes(req.body?.accountVisibility)) patch.account_visibility = req.body.accountVisibility;
+  if (["everyone", "followers", "nobody"].includes(req.body?.allowDirectMessages)) patch.allow_direct_messages = req.body.allowDirectMessages;
   if (req.body?.discoverable !== undefined) patch.discoverable = Boolean(req.body.discoverable);
-  const { data, error } = await supabase.from("users").update(patch).eq("id", req.user!.id).select("id,email,username,role,status,referral_code,bio,avatar_url,cover_url,account_visibility,discoverable,created_at,updated_at,email_verified_at,google_verified_at,phone_verified_at,content_participant").single();
+  const { data, error } = await supabase.from("users").update(patch).eq("id", req.user!.id).select("id,email,username,role,status,referral_code,bio,avatar_url,cover_url,account_visibility,discoverable,allow_direct_messages,created_at,updated_at,email_verified_at,google_verified_at,phone_verified_at,content_participant").single();
   if (error) {
     const duplicate = error.code === "23505" || error.message.toLowerCase().includes("unique");
     return res.status(400).json({ success: false, message: duplicate ? "That username is already in use." : "Unable to update profile." });
@@ -58,7 +59,7 @@ router.post("/profile/media", async (req: Request, res: Response) => {
     const upload = await supabase.storage.from("user-media").upload(objectPath, buffer, { contentType, upsert: false, cacheControl: "3600" });
     if (upload.error) { console.error("profile media upload", upload.error); return res.status(503).json({ success: false, message: "Unable to upload the image right now." }); }
     const { data: publicData } = supabase.storage.from("user-media").getPublicUrl(objectPath);
-    const { data, error } = await supabase.from("users").update({ [field]: publicData.publicUrl, updated_at: new Date().toISOString() }).eq("id", req.user!.id).select("id,username,bio,avatar_url,cover_url,account_visibility,discoverable,created_at").single();
+    const { data, error } = await supabase.from("users").update({ [field]: publicData.publicUrl, updated_at: new Date().toISOString() }).eq("id", req.user!.id).select("id,username,bio,avatar_url,cover_url,account_visibility,discoverable,allow_direct_messages,created_at").single();
     if (error) return res.status(500).json({ success: false, message: "Image uploaded but profile could not be updated." });
     await supabase.from("security_events").insert({ user_id: req.user!.id, event_type: "profile_media_updated", severity: "info", metadata: { field, objectPath } });
     return res.status(201).json({ success: true, user: data, url: publicData.publicUrl });
@@ -68,7 +69,6 @@ router.post("/profile/media", async (req: Request, res: Response) => {
   }
 });
 
-/* Public profile data is intentionally read-only. Editing remains available only through /profile. */
 router.get("/public/:identifier", async (req, res) => {
   try {
     const identifier = cleanText(req.params.identifier, 100);
