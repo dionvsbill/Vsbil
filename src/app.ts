@@ -28,6 +28,7 @@ import storefrontEnrichmentRouter from "./routes/storefrontEnrichment.js";
 import verificationRouter from "./routes/verification.js";
 import supportRouter from "./routes/support.js";
 import socialRouter from "./routes/social.js";
+import socialMonetizationRouter from "./routes/socialMonetization.js";
 import creatorProgramRouter from "./routes/creatorProgram.js";
 import jumiaImporterRouter, { cronRouter as jumiaCronRouter } from "./routes/jumiaImporter.js";
 import { rateLimit } from "./middleware/rateLimit.js";
@@ -62,6 +63,7 @@ app.use("/api/business-affiliate", rateLimit({ windowMs: 60000, max: 30, key: (r
 app.use("/api/verification", rateLimit({ windowMs: 60000, max: 10, key: (req) => `${req.ip}:verification` }), verificationRouter);
 app.use("/api/support", rateLimit({ windowMs: 60000, max: 12, key: (req) => `${req.ip}:support` }), supportRouter);
 app.use("/api/social", rateLimit({ windowMs: 60000, max: 100, key: (req) => `${req.ip}:social` }), socialRouter);
+app.use("/api/social-monetization", rateLimit({ windowMs: 60000, max: 80, key: (req) => `${req.ip}:social-monetization` }), socialMonetizationRouter);
 app.use("/api/creator-program", rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.ip}:creator-program` }), creatorProgramRouter);
 app.use("/api/import/jumia", rateLimit({ windowMs: 60000, max: 10, key: (req) => `${req.ip}:jumia-import` }), jumiaImporterRouter);
 app.use("/api/cron", jumiaCronRouter);
