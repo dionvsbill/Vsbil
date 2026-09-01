@@ -1,80 +1,30 @@
 (() => {
   "use strict";
-  const LOGO = "/assets/vsbil-logo.svg";
-  const FOOTER = "vsbilGlobalFooter";
-  const LOADER = "vsbilPageLoader";
-  const TOKEN_KEY = "vsbil_access_token";
-  const path = () => window.location.pathname.replace(/\/+$/, "") || "/";
-  const isAuthPage = () => /\/(login|register)\.html$/i.test(path()) || document.body?.classList.contains("auth-page");
-  const isBusinessPage = () => path() === "/business.html" || document.body?.classList.contains("business-page");
-  const hasSessionToken = () => { try { return Boolean(localStorage.getItem(TOKEN_KEY)?.trim()); } catch { return false; } };
+  const LOGO="/assets/vsbil-logo.svg",TOKEN="vsbil_access_token",FOOTER="vsbilGlobalFooter",LOADER="vsbilPageLoader";
+  const path=()=>location.pathname.replace(/\/+$/,"")||"/";
+  const isAuth=()=>/\/(login|register|activation|auth-callback)\.html$/i.test(path())||document.body?.classList.contains("auth-page");
+  const isBusiness=()=>path()==="/business.html"||document.body?.classList.contains("business-page");
+  const token=()=>{try{return localStorage.getItem(TOKEN)?.trim()||""}catch{return ""}};
 
-  async function getSession() {
-    try {
-      const token = localStorage.getItem(TOKEN_KEY)?.trim();
-      if (!token) return null;
-      const r = await fetch("/api/auth/session", { method:"POST", headers:{"Content-Type":"application/json",Accept:"application/json",Authorization:`Bearer ${token}`}, credentials:"same-origin", body:JSON.stringify({accessToken:token}) });
-      const d = await r.json().catch(() => null);
-      return r.ok && d?.success && d.user ? d.user : null;
-    } catch { return null; }
-  }
-  async function routeAuthenticatedAuthPage() { if (!isAuthPage() || !hasSessionToken()) return; const user = await getSession(); if (user) location.replace(user.status === "active" ? "/dashboard.html" : "/activate.html"); }
+  async function session(){const t=token();if(!t)return null;try{const r=await fetch("/api/auth/session",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json",Authorization:`Bearer ${t}`},credentials:"same-origin",body:JSON.stringify({accessToken:t})});const d=await r.json().catch(()=>null);return r.ok&&d?.success?d.user:null}catch{return null}}
+  async function redirectAuth(){if(!isAuth()||!token())return;const u=await session();if(u)location.replace(u.status==="active"?"/dashboard.html":"/activate.html")}
 
-  function removeDuplicatePageChrome() {
-    if (isBusinessPage() || isAuthPage()) return;
-    document.querySelectorAll("header.topbar, header.navbar, .site-header, .public-header").forEach((element) => element.remove());
-    document.querySelectorAll(".vsbil-app-shell .sidebar, .vsbil-app-shell .side-nav, .vsbil-app-shell .dashboard-sidebar").forEach((element) => element.remove());
-    document.querySelectorAll('a[href="/shop.html"],a[href="shop.html"]').forEach((a) => a.setAttribute("href", "/marketplace.html"));
-    document.querySelectorAll('a[href="/youtube.html"],a[href="youtube.html"]').forEach((a) => a.setAttribute("href", "/discover.html"));
+  function removeLegacy(){
+    if(isAuth()||isBusiness())return;
+    document.querySelectorAll("body > header.topbar,body > header.header,body > header.navbar,body > .site-header,body > .public-header,body > .topbar").forEach(e=>e.remove());
+    document.querySelectorAll("body > .app > .shell > aside.sidebar,body > .layout > aside.sidebar,body > .shell > aside.sidebar,body > aside.sidebar").forEach(e=>e.remove());
+    document.querySelectorAll("body > .app > .shell > aside.right,body > .layout > aside.right").forEach(e=>e.remove());
+    document.querySelectorAll('a[href="/shop.html"],a[href="shop.html"]').forEach(a=>a.setAttribute("href","/marketplace.html"));
   }
+  function loader(){if(isAuth()||isBusiness()||document.getElementById(LOADER))return;const e=document.createElement("div");e.id=LOADER;e.className="vsbil-page-loader";e.innerHTML=`<div class="vsbil-loader-box"><div class="vsbil-loader-mark"><img class="vsbil-loader-logo" src="${LOGO}" alt="VSBIL"></div><div class="vsbil-loader-name">VSBIL</div><div class="vsbil-loader-label">BUILD • ENGAGE • GROW</div></div>`;document.body.prepend(e);const hide=()=>requestAnimationFrame(()=>setTimeout(()=>e.classList.add("is-hidden"),420));addEventListener("load",hide,{once:true});setTimeout(hide,1100)}
 
-  function loader() {
-    if (document.getElementById(LOADER) || isAuthPage() || isBusinessPage()) return;
-    const e = document.createElement("div"); e.id=LOADER; e.className="vsbil-page-loader"; e.setAttribute("aria-label","Loading VSBIL");
-    e.innerHTML=`<div class="vsbil-loader-box"><div class="vsbil-loader-mark"><img class="vsbil-loader-logo" src="${LOGO}" alt="VSBIL logo"></div><div class="vsbil-loader-name">VSBIL</div><div class="vsbil-loader-label">BUILD • ENGAGE • GROW</div></div>`;
-    document.body.prepend(e);
-    const hide=()=>requestAnimationFrame(()=>setTimeout(()=>e.classList.add("is-hidden"),500));
-    addEventListener("load",hide,{once:true}); setTimeout(hide,1200);
-  }
-
-  function navigation() {
-    if (isAuthPage() || isBusinessPage() || document.getElementById("vsbilGlobalNavigation")) return;
-    document.body.classList.add("vsbil-app-shell");
-    const links=[
-      ["⌂","Home","/"],["◎","For You","/discover.html"],["◈","Campaigns","/creator.html"],
-      ["▤","Business","/business.html"],["◇","Shop","/marketplace.html"],["◉","WhatsApp","/whatsapp-bot.html"],
-      ["✉","Messages","/messages.html"],["♢","Notifications","/notifications.html"],["▦","Dashboard","/dashboard.html"],["⚙","Settings","/settings.html"]
-    ];
-    const current=path();
-    const active=href=>href==="/"?current==="/":current===href;
-    const nav=links.map(([icon,label,href])=>`<a href="${href}" class="${active(href)?"active":""}"><b aria-hidden="true">${icon}</b><span>${label}</span></a>`).join("");
-    const aside=document.createElement("aside"); aside.id="vsbilGlobalNavigation"; aside.className="vsbil-global-sidebar";
-    aside.innerHTML=`<a class="vsbil-global-nav-brand" href="/" aria-label="VSBIL home"><img src="${LOGO}" alt="VSBIL"><span>VSBIL</span></a><nav aria-label="Primary navigation">${nav}</nav><div class="vsbil-sidebar-account">${hasSessionToken()?`<a href="/profile.html"><b>●</b><span>Profile</span></a><a href="/settings.html"><b>⚙</b><span>Settings</span></a>`:`<a href="/login.html"><b>→</b><span>Sign in</span></a><a href="/register.html"><b>＋</b><span>Create account</span></a>`}</div>`;
-    document.body.prepend(aside);
-    const top=document.createElement("header"); top.id="vsbilGlobalTopbar"; top.className="vsbil-global-topbar";
-    top.innerHTML=`<a class="vsbil-mobile-brand" href="/"><img src="${LOGO}" alt="VSBIL"><span>VSBIL</span></a><label class="vsbil-global-search"><span>⌕</span><input id="vsbilGlobalSearch" type="search" placeholder="Search VSBIL" aria-label="Search VSBIL"></label><div class="vsbil-global-actions"><a href="/notifications.html" aria-label="Notifications">♢</a>${hasSessionToken()?`<a href="/profile.html" class="vsbil-top-avatar" aria-label="Profile">U</a>`:`<a href="/login.html" class="vsbil-signin">Sign in</a>`}</div>`;
-    document.body.prepend(top);
-    const search = top.querySelector("#vsbilGlobalSearch");
-    search?.addEventListener("keydown", (event) => { if (event.key === "Enter") { const q = search.value.trim(); if (q) location.href = `/discover.html?q=${encodeURIComponent(q)}`; } });
-    const bottom=document.createElement("nav"); bottom.id="vsbilGlobalBottomNav"; bottom.className="vsbil-global-bottom-nav"; bottom.setAttribute("aria-label","Mobile navigation");
-    const mobile=[links[0],links[1],links[2],links[4],links[8]];
-    bottom.innerHTML=mobile.map(([icon,label,href])=>`<a href="${href}" class="${active(href)?"active":""}"><b>${icon}</b><span>${label}</span></a>`).join("");
-    document.body.appendChild(bottom);
-    document.body.classList.add("vsbil-shared-shell");
-  }
-
-  function footer() {
-    if (isAuthPage() || isBusinessPage() || document.getElementById(FOOTER) || document.querySelector("footer.site-footer")) return;
-    const accountLinks=hasSessionToken()?`<a href="/dashboard.html">Dashboard</a><a href="/profile.html">Profile</a><a href="/earnings.html">Rewards &amp; Wallet</a><a href="/settings.html">Settings</a><a href="/security.html">Security</a>`:`<a href="/login.html">Login</a><a href="/register.html">Create Account</a>`;
-    document.body.insertAdjacentHTML("beforeend",`<footer id="${FOOTER}" class="site-footer vsbil-global-footer"><div class="vsbil-footer-inner"><div class="vsbil-footer-grid"><div class="vsbil-footer-brand"><a class="vsbil-footer-brandmark" href="/"><img src="${LOGO}" alt=""><span>VSBIL</span></a><p>A modern platform for creators, communities, verified commerce and practical business tools.</p><div class="vsbil-footer-status"><span class="vsbil-status-dot"></span>Platform online</div></div><div class="vsbil-footer-col"><h4>Platform</h4><a href="/about.html">About VSBIL</a><a href="/social.html">Community</a><a href="/activities.html">Activities</a><a href="/creator.html">Creator Hub</a><a href="/faq.html">Help Center</a></div><div class="vsbil-footer-col"><h4>Business</h4><a href="/business.html">Business Suite</a><a href="/marketplace.html">Marketplace</a><a href="/shop-admin.html">Shop Manager</a><a href="/order-track.html">Order Tracking</a><a href="/whatsapp-bot.html">WhatsApp Automation</a><a href="/advertise.html">Advertising</a></div><div class="vsbil-footer-col"><h4>Account</h4>${accountLinks}</div><div class="vsbil-footer-col"><h4>Trust &amp; Support</h4><a href="/support.html">Support &amp; Reports</a><a href="/contact.html">Contact Us</a><a href="/legal.html">Trust Center</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/security.html">Security</a><a href="/community-guidelines.html">Community Guidelines</a><a href="/acceptable-use.html">Acceptable Use</a></div></div><div class="vsbil-footer-bottom"><span>© ${new Date().getFullYear()} VSBIL. All rights reserved.</span><span class="vsbil-footer-legal"><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/cookie-policy.html">Cookies</a><a href="/data-rights.html">Data Rights</a></span></div></div></footer>`);
-  }
-  function boot(){ if(isAuthPage()){ routeAuthenticatedAuthPage(); return; } removeDuplicatePageChrome(); loader(); navigation(); footer(); document.documentElement.classList.add("vsbil-shell-ready");
-    if (path() === "/profile.html" || path() === "/settings.html") {
-      const s = document.createElement("script");
-      s.src = "/js/profile-settings-fix.js?v=20260901-1";
-      s.defer = true;
-      document.head.appendChild(s);
-    }
-  }
+  /* Bottom-only destinations: never repeat these in the sidebar. */
+  const bottom=[["⌂","Home","/","home"],["◎","Discover","/discover.html","discover"],["▶","Campaigns","/activities.html","campaigns"],["◇","Shop","/marketplace.html","shop"],["●","Profile","/profile.html","profile"]];
+  const side=[["▦","Dashboard","/dashboard.html","dashboard"],["＋","Create Campaign","/creator.html","create-campaign"],["▤","My Campaigns","/creator.html#mine","my-campaigns"],["▥","Business","/business.html","business"],["◉","YouTube","/settings.html#connections","youtube"],["◌","WhatsApp","/whatsapp-bot.html","whatsapp"],["✉","Messages","/messages.html","messages"],["♢","Notifications","/notifications.html","notifications"],["₵","Earnings","/earnings.html","earnings"],["⚙","Settings","/settings.html","settings"],["?","Support","/support.html","support"]];
+  function active(){const p=path();if(p==="/")return"home";if(p.includes("activities"))return"campaigns";if(p.includes("creator"))return location.hash==="#mine"?"my-campaigns":"create-campaign";if(p.includes("dashboard"))return"dashboard";if(p.includes("business"))return"business";if(p.includes("whatsapp"))return"whatsapp";if(p.includes("messages"))return"messages";if(p.includes("notifications"))return"notifications";if(p.includes("earnings"))return"earnings";if(p.includes("settings"))return"settings";if(p.includes("support")||p.includes("appeal"))return"support";if(p.includes("profile"))return"profile";if(p.includes("discover"))return"discover";if(p.includes("marketplace")||p.includes("shop"))return"shop";return"home"}
+  function navigation(){if(isAuth()||isBusiness()||document.getElementById("vsbilGlobalNavigation"))return;document.body.classList.add("vsbil-app-shell");const key=active();const aside=document.createElement("aside");aside.id="vsbilGlobalNavigation";aside.className="vsbil-global-sidebar";aside.innerHTML=`<a class="vsbil-global-nav-brand" href="/"><img src="${LOGO}" alt="VSBIL"><span>VSBIL</span></a><nav aria-label="VSBIL sidebar">${side.map(([i,l,h,k])=>`<a href="${h}" class="${k===key?"active":""}"><b>${i}</b><span>${l}</span></a>`).join("")}</nav><div class="vsbil-sidebar-account"><a href="/profile.html"><b id="vsbilSidebarAvatar">U</b><span>My Profile</span></a></div>`;document.body.prepend(aside);const top=document.createElement("header");top.id="vsbilGlobalTopbar";top.className="vsbil-global-topbar";top.innerHTML=`<button id="vsbilMobileMenu" class="vsbil-mobile-menu" type="button" aria-label="Open navigation" aria-expanded="false">☰</button><a class="vsbil-mobile-brand" href="/"><img src="${LOGO}" alt="VSBIL"><span>VSBIL</span></a><label class="vsbil-global-search"><span>⌕</span><input id="vsbilGlobalSearch" type="search" placeholder="Search VSBIL" aria-label="Search VSBIL"></label><div class="vsbil-global-actions"><a href="/notifications.html" aria-label="Notifications">♢</a><a href="/profile.html" id="vsbilTopAvatar" class="vsbil-top-avatar" aria-label="Your profile">U</a></div>`;document.body.prepend(top);const nav=document.createElement("nav");nav.id="vsbilGlobalBottomNav";nav.className="vsbil-global-bottom-nav";nav.setAttribute("aria-label","Primary mobile navigation");nav.innerHTML=bottom.map(([i,l,h,k])=>`<a href="${h}" class="${k===key?"active":""}"><b>${i}</b><span>${l}</span></a>`).join("");document.body.appendChild(nav);const menu=top.querySelector("#vsbilMobileMenu");menu?.addEventListener("click",()=>{const open=aside.classList.toggle("open");menu.setAttribute("aria-expanded",String(open))});document.addEventListener("click",e=>{if(!aside.classList.contains("open"))return;const t=e.target;if(t instanceof Node&&!aside.contains(t)&&!menu?.contains(t)){aside.classList.remove("open");menu?.setAttribute("aria-expanded","false")}});top.querySelector("#vsbilGlobalSearch")?.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.value.trim())location.href=`/discover.html?q=${encodeURIComponent(e.target.value.trim())}`});document.body.classList.add("vsbil-shared-shell")}
+  function avatar(){const cached=(()=>{try{return JSON.parse(localStorage.getItem("vsbil_user")||"null")}catch{return null}})();const render=u=>{const url=typeof u?.avatar_url==="string"?u.avatar_url.trim():"",fallback=String(u?.username||u?.email||"U").trim().slice(0,1).toUpperCase()||"U",top=document.getElementById("vsbilTopAvatar"),side=document.getElementById("vsbilSidebarAvatar");if(top){if(url){const img=document.createElement("img");img.src=url;img.alt="Profile";img.loading="eager";img.onerror=()=>top.textContent=fallback;top.replaceChildren(img)}else top.textContent=fallback}if(side)side.textContent=fallback};render(cached||{});const t=token();if(!t)return;fetch("/api/users/profile",{headers:{Accept:"application/json",Authorization:`Bearer ${t}`},credentials:"same-origin"}).then(r=>r.json()).then(d=>{if(d?.user){try{localStorage.setItem("vsbil_user",JSON.stringify(d.user))}catch{}render(d.user)}}).catch(()=>{})}
+  function footer(){if(isAuth()||isBusiness()||document.getElementById(FOOTER)||document.querySelector("footer.site-footer"))return;const account=token()?`<a href="/dashboard.html">Dashboard</a><a href="/profile.html">Profile</a><a href="/earnings.html">Rewards &amp; Wallet</a><a href="/settings.html">Settings</a><a href="/security.html">Security</a>`:`<a href="/login.html">Login</a><a href="/register.html">Create Account</a>`;document.body.insertAdjacentHTML("beforeend",`<footer id="${FOOTER}" class="site-footer vsbil-global-footer"><div class="vsbil-footer-inner"><div class="vsbil-footer-grid"><div class="vsbil-footer-brand"><a class="vsbil-footer-brandmark" href="/"><img src="${LOGO}" alt=""><span>VSBIL</span></a><p>A modern platform for creators, communities, verified commerce and practical business tools.</p><div class="vsbil-footer-status"><span class="vsbil-status-dot"></span>Platform online</div></div><div class="vsbil-footer-col"><h4>Platform</h4><a href="/about.html">About VSBIL</a><a href="/social.html">Community</a><a href="/activities.html">Activities</a><a href="/creator.html">Creator Hub</a><a href="/faq.html">Help Center</a></div><div class="vsbil-footer-col"><h4>Business</h4><a href="/business.html">Business Suite</a><a href="/marketplace.html">Marketplace</a><a href="/shop-admin.html">Shop Manager</a><a href="/order-track.html">Order Tracking</a><a href="/whatsapp-bot.html">WhatsApp Automation</a><a href="/advertise.html">Advertising</a></div><div class="vsbil-footer-col"><h4>Account</h4>${account}</div><div class="vsbil-footer-col"><h4>Trust &amp; Support</h4><a href="/support.html">Support &amp; Reports</a><a href="/contact.html">Contact Us</a><a href="/legal.html">Trust Center</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/security.html">Security</a><a href="/community-guidelines.html">Community Guidelines</a><a href="/acceptable-use.html">Acceptable Use</a></div></div><div class="vsbil-footer-bottom"><span>© ${new Date().getFullYear()} VSBIL. All rights reserved.</span><span class="vsbil-footer-legal"><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/cookie-policy.html">Cookies</a><a href="/data-rights.html">Data Rights</a></span></div></div></footer>`)}
+  function boot(){if(isAuth()){redirectAuth();return}removeLegacy();loader();navigation();avatar();footer();document.documentElement.classList.add("vsbil-shell-ready")}
   document.readyState==="loading"?document.addEventListener("DOMContentLoaded",boot,{once:true}):boot();
 })();
