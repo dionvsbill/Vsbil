@@ -26,6 +26,17 @@
     return d;
   }
 
+  function loadScript(src) {
+    return new Promise((resolve) => {
+      if ([...document.scripts].some(s => s.src.includes(src))) return resolve();
+      const s = document.createElement("script");
+      s.src = `${src}?v=20260901-2`;
+      s.onload = resolve;
+      s.onerror = resolve;
+      document.head.appendChild(s);
+    });
+  }
+
   function saveUser(user) {
     try { localStorage.setItem(USER_KEY, JSON.stringify({ ...cachedUser(), ...user })); } catch {}
   }
@@ -105,6 +116,7 @@
 
   async function fixSettings() {
     if (!token()) { location.replace("/login.html?returnTo=%2Fsettings.html"); return; }
+    await loadScript("/js/settings.js");
     const user = await getMe();
     hydrateAvatars(user);
     try {
