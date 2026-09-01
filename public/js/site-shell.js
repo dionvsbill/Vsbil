@@ -68,6 +68,13 @@
     const accountLinks=hasSessionToken()?`<a href="/dashboard.html">Dashboard</a><a href="/profile.html">Profile</a><a href="/earnings.html">Rewards &amp; Wallet</a><a href="/settings.html">Settings</a><a href="/security.html">Security</a>`:`<a href="/login.html">Login</a><a href="/register.html">Create Account</a>`;
     document.body.insertAdjacentHTML("beforeend",`<footer id="${FOOTER}" class="site-footer vsbil-global-footer"><div class="vsbil-footer-inner"><div class="vsbil-footer-grid"><div class="vsbil-footer-brand"><a class="vsbil-footer-brandmark" href="/"><img src="${LOGO}" alt=""><span>VSBIL</span></a><p>A modern platform for creators, communities, verified commerce and practical business tools.</p><div class="vsbil-footer-status"><span class="vsbil-status-dot"></span>Platform online</div></div><div class="vsbil-footer-col"><h4>Platform</h4><a href="/about.html">About VSBIL</a><a href="/social.html">Community</a><a href="/activities.html">Activities</a><a href="/creator.html">Creator Hub</a><a href="/faq.html">Help Center</a></div><div class="vsbil-footer-col"><h4>Business</h4><a href="/business.html">Business Suite</a><a href="/marketplace.html">Marketplace</a><a href="/shop-admin.html">Shop Manager</a><a href="/order-track.html">Order Tracking</a><a href="/whatsapp-bot.html">WhatsApp Automation</a><a href="/advertise.html">Advertising</a></div><div class="vsbil-footer-col"><h4>Account</h4>${accountLinks}</div><div class="vsbil-footer-col"><h4>Trust &amp; Support</h4><a href="/support.html">Support &amp; Reports</a><a href="/contact.html">Contact Us</a><a href="/legal.html">Trust Center</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/security.html">Security</a><a href="/community-guidelines.html">Community Guidelines</a><a href="/acceptable-use.html">Acceptable Use</a></div></div><div class="vsbil-footer-bottom"><span>© ${new Date().getFullYear()} VSBIL. All rights reserved.</span><span class="vsbil-footer-legal"><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/cookie-policy.html">Cookies</a><a href="/data-rights.html">Data Rights</a></span></div></div></footer>`);
   }
-  function boot(){ if(isAuthPage()){ routeAuthenticatedAuthPage(); return; } removeDuplicatePageChrome(); loader(); navigation(); footer(); document.documentElement.classList.add("vsbil-shell-ready"); }
+  function boot(){ if(isAuthPage()){ routeAuthenticatedAuthPage(); return; } removeDuplicatePageChrome(); loader(); navigation(); footer(); document.documentElement.classList.add("vsbil-shell-ready");
+    if (path() === "/profile.html" || path() === "/settings.html") {
+      const s = document.createElement("script");
+      s.src = "/js/profile-settings-fix.js?v=20260901-1";
+      s.defer = true;
+      document.head.appendChild(s);
+    }
+  }
   document.readyState==="loading"?document.addEventListener("DOMContentLoaded",boot,{once:true}):boot();
 })();
