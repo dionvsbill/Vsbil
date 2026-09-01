@@ -44,8 +44,8 @@ form?.addEventListener("submit", async (event) => {
   }
 
   try {
-    /* Real backend route: POST /api/auth/login. */
-    const data = await window.VSBIL_AUTH.request("/api/auth/login", {
+    // Use the same production authentication system as Google OAuth and the callback.
+    const data = await window.VSBIL_AUTH.request("/api/auth/production/login", {
       email: normalizedEmail,
       password: pw
     });
