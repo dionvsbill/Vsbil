@@ -1,0 +1,10 @@
+/* Final global-shell compatibility layer. Business Suite is intentionally excluded. */
+body.vsbil-shared-shell > .header,body.vsbil-shared-shell > header.topbar,body.vsbil-shared-shell > header.navbar,body.vsbil-shared-shell > .site-header,body.vsbil-shared-shell > .public-header{display:none!important}
+body.vsbil-shared-shell > .layout > aside.sidebar,body.vsbil-shared-shell > .layout > aside.right,body.vsbil-shared-shell > aside.sidebar,body.vsbil-shared-shell > .app > .shell > aside.sidebar{display:none!important}
+.vsbil-top-avatar,.vsbil-sidebar-account b{overflow:hidden;border-radius:50%!important;display:grid;place-items:center}
+.vsbil-top-avatar img,.vsbil-sidebar-account b img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+@media(min-width:851px){body.vsbil-shared-shell{padding-left:238px;padding-top:68px}.vsbil-global-sidebar{display:block!important}.vsbil-global-topbar{display:flex!important}.vsbil-global-bottom-nav{display:none!important}}
+@media(max-width:850px){body.vsbil-shared-shell{padding-left:0;padding-top:60px;padding-bottom:82px}.vsbil-global-sidebar{display:none}.vsbil-global-sidebar.open{display:block}.vsbil-global-topbar{left:0}.vsbil-global-bottom-nav{display:grid}}
+/* Profile keeps its content, but its legacy chrome never renders beside the global shell. */
+body.vsbil-shared-shell .layout{display:block!important;max-width:none!important;margin:0!important;padding:10px!important}
+body.vsbil-shared-shell .layout > .main{width:min(100%,1000px);margin:0 auto}
