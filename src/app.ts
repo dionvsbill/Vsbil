@@ -75,7 +75,7 @@ app.use("/api/admin",supportAdminRouter);app.use("/api/admin",campaignAdminRoute
 app.get("/api/health",(_req,res)=>res.json({success:true,service:"VSBIL API",status:"online",environment:nodeEnv,time:new Date().toISOString()}));
 
 const publicDirectory=path.resolve(__dirname,"../public");
-const shellVersion="20260901-3";
+const shellVersion="20260901-4";
 const inject=(html:string)=>{const shell=`\n<link rel="manifest" href="/manifest.webmanifest?v=${shellVersion}"><link rel="icon" href="/assets/vsbil-logo.svg" type="image/svg+xml"><meta name="theme-color" content="#070a12"><link rel="stylesheet" href="/css/brand.css?v=${shellVersion}"><link rel="stylesheet" href="/css/site-shell.css?v=${shellVersion}"><link rel="stylesheet" href="/css/theme-fixes.css?v=${shellVersion}"><link rel="stylesheet" href="/css/social.css?v=${shellVersion}"><script src="/js/site-shell.js?v=${shellVersion}" defer></script>`;const withHead=html.replace("</head>",`${html.includes("/js/site-shell.js")?"":shell}</head>`);return withHead.replace("</body>",`${html.includes("/js/pwa.js")?"":`<script src="/js/pwa.js?v=${shellVersion}" defer></script>`}</body>`)};
 const send=async(file:string,res:express.Response,next:express.NextFunction)=>{try{const html=await readFile(file,"utf8");return res.status(200).type("html").setHeader("X-Content-Type-Options","nosniff").setHeader("Cache-Control","no-store").send(inject(html))}catch(error:any){if(error?.code==="ENOENT")return next();return next(error)}};
 app.get("/",(_req,res,next)=>send(path.join(publicDirectory,"index.html"),res,next));
