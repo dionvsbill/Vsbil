@@ -29,11 +29,20 @@
     const title = document.getElementById("title");
     const details = document.getElementById("details");
 
+    function redirectToLogin(reason) {
+      const params = new URLSearchParams();
+      params.set("oauth_error", reason || "signin_failed");
+      window.location.replace("/login.html?" + params.toString());
+    }
+
     function fail(text) {
       title.textContent = "Sign-in could not be completed.";
       message.textContent = text;
-      details.textContent = "Return to the login page and try again.";
+      details.textContent = "Returning to the login page…";
       details.className = "form-message error";
+
+      // Do not leave the user stranded on the callback page.
+      window.setTimeout(() => redirectToLogin(text), 700);
     }
 
     function readOAuthResult() {
@@ -64,7 +73,7 @@
           accessToken: session.accessToken
         });
 
-        if (!data?.user) throw new Error("Your VSBIL profile could not be loaded.");
+        if (!data?.user) throw new Error("VSBIL profile not found.");
 
         VSBIL_AUTH.saveSession(session, data.user);
         history.replaceState({}, document.title, "/auth-callback.html");
