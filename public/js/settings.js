@@ -1,140 +1,20 @@
 "use strict";
-
-const token = () => localStorage.getItem("vsbil_access_token");
-const headers = () => ({ Authorization: `Bearer ${token()}`, Accept: "application/json" });
-const toast = document.getElementById("toast");
-
-function show(message) {
-  if (!toast) return;
-  toast.textContent = message;
-  toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 3500);
-}
-
-async function api(url, options = {}) {
-  const response = await fetch(url, {
-    ...options,
-    credentials: "include",
-    headers: { ...headers(), ...(options.headers || {}) },
-  });
-  const data = await response.json().catch(() => null);
-  if (response.status === 401) {
-    location.href = "/login.html";
-    throw new Error("Authentication required");
-  }
-  if (!response.ok) throw new Error(data?.message || "Request failed");
-  return data;
-}
-
-document.querySelectorAll(".settings-nav button").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll(".settings-nav button").forEach((x) => x.classList.remove("active"));
-    document.querySelectorAll(".settings-section").forEach((x) => x.classList.remove("active"));
-    button.classList.add("active");
-    document.getElementById(button.dataset.section)?.classList.add("active");
-  });
-});
-
-async function loadAccount() {
-  try {
-    const data = await api("/api/users/profile");
-    const user = data.user;
-    document.getElementById("username").textContent = user.username || "VSBIL user";
-    document.getElementById("email").textContent = user.email || "";
-
-    const status = document.getElementById("accountStatus");
-    status.textContent = user.status || "Unknown";
-    status.classList.toggle("ok", user.status === "active");
-
-    const emailStatus = document.getElementById("emailStatus");
-    const verified = Boolean(user.email_verified_at);
-    emailStatus.textContent = verified ? "Verified" : "Not verified";
-    emailStatus.classList.toggle("ok", verified);
-    document.getElementById("sendCode").hidden = verified;
-  } catch (error) {
-    show(error.message);
-  }
-}
-
-async function loadYoutube() {
-  try {
-    const data = await api("/api/youtube/connection");
-    const state = document.getElementById("youtubeState");
-    const connect = document.getElementById("connectYoutube");
-    const disconnect = document.getElementById("disconnectYoutube");
-
-    if (data.connected) {
-      const c = data.connection;
-      const safeTitle = escapeHtml(c.channel_title || "YouTube channel");
-      const safeUrl = escapeHtml(c.channel_url || "");
-      const thumb = escapeHtml(c.channel_thumbnail_url || "");
-      state.innerHTML = `<div class="channel">${thumb ? `<img src="${thumb}" alt="YouTube channel">` : ""}<div><strong>${safeTitle}</strong><div class="muted">${safeUrl}</div><span class="status ok">Connected</span>${c.last_verified_at ? `<div class="muted">Last verified ${escapeHtml(new Date(c.last_verified_at).toLocaleString())}</div>` : ""}</div></div>`;
-      connect.hidden = true;
-      disconnect.hidden = false;
-    } else {
-      state.innerHTML = '<p class="muted">No YouTube channel is connected.</p>';
-      connect.hidden = false;
-      disconnect.hidden = true;
-    }
-  } catch (error) {
-    show(error.message);
-  }
-}
-
-function escapeHtml(value) {
-  return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
-}
-
-document.getElementById("connectYoutube")?.addEventListener("click", () => {
-  location.href = "/api/youtube/connect";
-});
-
-document.getElementById("disconnectYoutube")?.addEventListener("click", async () => {
-  if (!confirm("Disconnect your YouTube account? You may lose access to YouTube verification features.")) return;
-  try {
-    await api("/api/youtube/connection", { method: "DELETE" });
-    show("YouTube disconnected");
-    await loadYoutube();
-  } catch (error) {
-    show(error.message);
-  }
-});
-
-document.getElementById("sendCode")?.addEventListener("click", async () => {
-  const button = document.getElementById("sendCode");
-  try {
-    button.disabled = true;
-    await api("/api/verification/send", { method: "POST" });
-    document.getElementById("codeBox").hidden = false;
-    show("Verification code sent to your email");
-  } catch (error) {
-    show(error.message);
-  } finally {
-    button.disabled = false;
-  }
-});
-
-document.getElementById("verifyCode")?.addEventListener("click", async () => {
-  const code = document.getElementById("code").value.trim();
-  try {
-    await api("/api/verification/confirm", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
-    });
-    document.getElementById("emailStatus").textContent = "Verified";
-    document.getElementById("emailStatus").classList.add("ok");
-    document.getElementById("sendCode").hidden = true;
-    document.getElementById("codeBox").hidden = true;
-    show("Email verified successfully");
-  } catch (error) {
-    show(error.message);
-  }
-});
-
-const params = new URLSearchParams(location.search);
-if (params.get("youtube") === "connected") show("YouTube connected successfully");
-if (params.get("youtube") === "cancelled") show("YouTube connection was cancelled");
-
-loadAccount();
-loadYoutube();
+const token=()=>localStorage.getItem("vsbil_access_token")||"";const toast=document.getElementById("toast");const $=s=>document.querySelector(s);const $$=s=>[...document.querySelectorAll(s)];
+function show(m){if(!toast)return;toast.textContent=m;toast.style.display="block";setTimeout(()=>toast.style.display="none",3500)}
+function go(p){location.assign(p)}
+async function api(path,opt={}){const h=new Headers(opt.headers||{});h.set("Accept","application/json");if(opt.body!==undefined)h.set("Content-Type","application/json");if(token())h.set("Authorization",`Bearer ${token()}`);const r=await fetch(path,{...opt,credentials:"same-origin",headers:h});const d=await r.json().catch(()=>null);if(r.status===401){localStorage.removeItem("vsbil_access_token");localStorage.removeItem("vsbil_refresh_token");localStorage.removeItem("vsbil_user");go("/login.html");throw Error("Authentication required")}if(!r.ok||d?.success===false)throw Error(d?.message||`Request failed (${r.status})`);return d}
+function sw(el,on){if(!el)return;el.classList.toggle("on",!!on);el.setAttribute("aria-pressed",String(!!on))}
+function panel(n){const b=$(`.settings-nav button[data-panel="${CSS.escape(n)}"]`),p=document.getElementById(n);if(!b||!p)return;$$('.settings-nav button').forEach(x=>x.classList.remove('active'));$$('.panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');p.classList.add('active');history.replaceState({},'',location.pathname+'#'+encodeURIComponent(n))}
+$$('.settings-nav button').forEach(b=>b.addEventListener('click',()=>panel(b.dataset.panel)));
+async function account(){const d=await api('/api/users/profile');const u=d.user||{};const i=$('#accountIdentity');if(i)i.textContent=`${u.username||'VSBIL user'} • ${u.email||''}`;const v=$('#visibility');if(v)v.value=u.account_visibility||u.accountVisibility||'public';const m=$('#messages');if(m)m.value=u.allow_direct_messages||u.allowDirectMessages||'everyone';sw($('#discoverable'),u.discoverable!==false);localStorage.setItem('vsbil_user',JSON.stringify({...JSON.parse(localStorage.getItem('vsbil_user')||'{}'),...u}));return u}
+async function social(){const d=await api('/api/social/settings');const s=d.settings||{};$$('[data-social]').forEach(e=>sw(e,!!s[e.dataset.social]));for(const id of ['theme','language','autoplay','video_quality','sensitive_content']){const e=$('#'+id);if(e&&s[id]!=null)e.value=s[id]}}
+async function saveSocial(k,v){await api('/api/social/settings',{method:'PATCH',body:JSON.stringify({[k]:v})});show('Setting saved')}
+async function saveUser(p){await api('/api/users/profile',{method:'PATCH',body:JSON.stringify(p)});show('Account setting saved');await account()}
+async function youtube(){const s=$('#youtubeState');if(!s)return;try{const d=await api('/api/youtube/connection');const c=d.connection,b=$('#connectYoutube'),x=$('#disconnectYoutube');if(d.connected&&c){s.innerHTML=`<div><strong>${esc(c.channel_title||'YouTube channel')}</strong><div class="muted">${esc(c.channel_url||'')}</div><div class="status">Connected${c.last_verified_at?' • Last verified '+esc(new Date(c.last_verified_at).toLocaleString()):''}</div></div>`;if(b)b.hidden=true;if(x)x.hidden=false}else{s.textContent='No YouTube channel is connected.';if(b)b.hidden=false;if(x)x.hidden=true}}catch(e){show(e.message)}}
+async function startYoutube(){if(!token())return go('/login.html?returnTo=%2Fsettings.html');const b=$('#connectYoutube');if(b){b.disabled=true;b.textContent='Connecting…'}try{const r=await fetch('/api/youtube/connect',{headers:{Authorization:`Bearer ${token()}`},credentials:'same-origin',redirect:'manual'});if(r.type==='opaqueredirect'||r.status===0){location.assign('/api/youtube/connect');return}if(r.status>=300&&r.status<400){const u=r.headers.get('Location');if(u)location.assign(u);else location.assign('/api/youtube/connect');return}const d=await r.json().catch(()=>null);throw Error(d?.message||'Unable to start YouTube authorization.')}catch(e){show(e.message);if(b){b.disabled=false;b.textContent='Connect YouTube'}}}
+async function disconnectYoutube(){if(!confirm('Disconnect your YouTube account?'))return;try{await api('/api/youtube/connection',{method:'DELETE'});show('YouTube disconnected');await youtube()}catch(e){show(e.message)}}
+async function creator(){const s=$('#creatorStatus');if(!s)return;try{const d=await api('/api/creator/program');const j=!!d.joined;s.textContent=d.earningEligible?'Active • eligible for creator earning features':j?'Joined • activation/eligibility required':d.activationRequired?'Activate your account before joining':'Not enrolled';if($('#creatorJoin'))$('#creatorJoin').style.display=j?'none':'inline-flex';if($('#creatorLeave'))$('#creatorLeave').style.display=j?'inline-flex':'none'}catch(e){s.textContent=e.message}}
+function referral(u){const a=$('#account');if(!a||$('#referralCard'))return;const c=u.referral_code||u.referralCode||'';const card=document.createElement('div');card.id='referralCard';card.className='group';card.innerHTML=`<h2>Referral Center</h2><p class="muted">Your personal referral code and link. Rewards are subject to qualification and fraud controls.</p><div class="row"><div class="row-copy"><strong>Referral code</strong><div class="referral" id="refCode">${esc(c||'Not available')}</div></div><div class="control"><button class="btn" id="copyRef">Copy</button></div></div><div class="row"><div class="row-copy"><strong>Referral link</strong><div class="referral" id="refLink"></div></div><div class="control"><button class="btn primary" id="shareRef">Share</button></div></div>`;a.appendChild(card);const link=`${location.origin}/register.html?ref=${encodeURIComponent(c)}`;$('#refLink').textContent=link;$('#copyRef').onclick=async()=>{await navigator.clipboard.writeText(c);show('Referral code copied')};$('#shareRef').onclick=async()=>{if(navigator.share)await navigator.share({title:'Join VSBIL',text:'Join me on VSBIL',url:link});else{await navigator.clipboard.writeText(link);show('Referral link copied')}}}
+function esc(v){return String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;')}
+function bind(){document.addEventListener('click',async e=>{const el=e.target.closest('[data-action]');if(!el)return;const a=el.dataset.action;if(a==='edit-profile')return go('/profile.html');if(a==='youtube')return panel('connections');if(a==='whatsapp')return go('/whatsapp-bot.html');if(a==='open-campaigns')return go('/creator.html');if(a==='open-earnings')return go('/earnings.html');if(a==='password')return go('/reset-password.html');if(a==='security-activity')return creator();if(a==='export'){try{const d=await api('/api/users/profile');const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const x=document.createElement('a');x.href=URL.createObjectURL(blob);x.download='vsbil-profile-export.json';x.click()}catch(x){show(x.message)}}if(a==='deactivate'&&confirm('Deactivate your VSBIL account?')){try{await saveUser({status:'disabled'})}catch(x){show(x.message)}}});$('#connectYoutube')?.addEventListener('click',startYoutube);$('#disconnectYoutube')?.addEventListener('click',disconnectYoutube);$('#discoverable')?.addEventListener('click',async e=>{const on=!e.currentTarget.classList.contains('on');sw(e.currentTarget,on);try{await saveUser({discoverable:on})}catch(x){sw(e.currentTarget,!on);show(x.message)}});$('#visibility')?.addEventListener('change',e=>saveUser({accountVisibility:e.target.value}).catch(x=>show(x.message)));$('#messages')?.addEventListener('change',e=>saveUser({allowDirectMessages:e.target.value}).catch(x=>show(x.message)));$$('[data-social]').forEach(e=>e.addEventListener('click',async()=>{const on=!e.classList.contains('on');sw(e,on);try{await saveSocial(e.dataset.social,on)}catch(x){sw(e,!on);show(x.message)}}));['theme','language','autoplay','video_quality','sensitive_content'].forEach(id=>$('#'+id)?.addEventListener('change',e=>saveSocial(id,e.target.value).catch(x=>show(x.message))));$('#creatorJoin')?.addEventListener('click',async()=>{try{await api('/api/creator/program/join',{method:'POST',body:JSON.stringify({acceptTerms:true})});show('Creator program enabled');await creator()}catch(x){show(x.message)}});$('#creatorLeave')?.addEventListener('click',async()=>{if(!confirm('Leave the creator program?'))return;try{await api('/api/creator/program/leave',{method:'POST',body:'{}'});show('Creator participation disabled');await creator()}catch(x){show(x.message)}})}
+(async()=>{if(!token())return go('/login.html?returnTo=%2Fsettings.html');const h=decodeURIComponent(location.hash.slice(1));if(h&&document.getElementById(h))panel(h);try{const u=await account();referral(u);await Promise.allSettled([social(),youtube(),creator()])}catch(e){show(e.message)}bind();const p=new URLSearchParams(location.search);if(p.get('youtube')==='connected')show('YouTube connected successfully');if(p.get('youtube')==='cancelled')show('YouTube connection cancelled')})();
