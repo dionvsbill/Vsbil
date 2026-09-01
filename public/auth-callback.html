@@ -1,1 +1,86 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#070a12"><title>Signing you in — Vsbil</title><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/auth.css"></head><body class="auth-page"><main class="auth-container"><a class="auth-logo" href="/">Vsbil</a><section class="auth-card"><div class="auth-header"><p class="eyebrow">SECURE SIGN-IN</p><h1>Finishing your sign-in.</h1><p id="message">We're securely validating your Google session. Please keep this window open.</p></div></section></main><script src="/js/auth-flow.js"></script><script>const m=document.getElementById('message');(async()=>{try{const hash=new URLSearchParams(location.hash.replace(/^#/,'')).get('access_token');const query=new URLSearchParams(location.search);if(!hash){throw new Error(query.get('error_description')||'No authentication session was returned.');}const d=await VSBIL_AUTH.request('/api/auth/production/session',{accessToken:hash});VSBIL_AUTH.saveSession({accessToken:hash},d.user);history.replaceState({},document.title,location.pathname);m.textContent='Signed in successfully. Opening your dashboard…';setTimeout(()=>location.replace('/dashboard.html'),500);}catch(e){m.textContent=e.message+' You can return to the login page and try again.';}})();</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#070a12">
+  <title>Signing you in — VSBIL</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body class="auth-page">
+  <main class="auth-container">
+    <a class="auth-logo" href="/">VSBIL</a>
+    <section class="auth-card" aria-live="polite">
+      <div class="auth-header">
+        <p class="eyebrow">SECURE SIGN-IN</p>
+        <h1 id="title">Finishing your sign-in.</h1>
+        <p id="message">We're securely validating your Google session. Please keep this window open.</p>
+      </div>
+      <div id="details" class="form-message"></div>
+    </section>
+  </main>
+
+  <script src="/js/auth-flow.js"></script>
+  <script>
+    "use strict";
+
+    const message = document.getElementById("message");
+    const title = document.getElementById("title");
+    const details = document.getElementById("details");
+
+    function fail(text) {
+      title.textContent = "Sign-in could not be completed.";
+      message.textContent = text;
+      details.textContent = "Return to the login page and try again.";
+      details.className = "form-message error";
+    }
+
+    function readOAuthResult() {
+      const query = new URLSearchParams(window.location.search);
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+
+      const error = query.get("error_description") || query.get("error") || hash.get("error_description") || hash.get("error");
+      if (error) throw new Error(decodeURIComponent(error.replace(/\+/g, " ")));
+
+      const accessToken = hash.get("access_token") || query.get("access_token");
+      if (!accessToken) throw new Error("No authentication session was returned by Supabase.");
+
+      return {
+        accessToken,
+        refreshToken: hash.get("refresh_token") || query.get("refresh_token") || null,
+        expiresIn: hash.get("expires_in") || query.get("expires_in") || null,
+        expiresAt: hash.get("expires_at") || query.get("expires_at") || null,
+        tokenType: hash.get("token_type") || query.get("token_type") || "bearer"
+      };
+    }
+
+    (async () => {
+      try {
+        const session = readOAuthResult();
+        message.textContent = "Validating your VSBIL account…";
+
+        const data = await VSBIL_AUTH.request("/api/auth/production/session", {
+          accessToken: session.accessToken
+        });
+
+        if (!data?.user) throw new Error("Your VSBIL profile could not be loaded.");
+
+        VSBIL_AUTH.saveSession(session, data.user);
+        history.replaceState({}, document.title, "/auth-callback.html");
+
+        title.textContent = "You're signed in.";
+        message.textContent = `Welcome back, ${data.user.username || "VSBIL user"}. Opening your dashboard…`;
+        details.textContent = "";
+        details.className = "form-message success";
+
+        window.setTimeout(() => window.location.replace("/dashboard.html"), 450);
+      } catch (error) {
+        console.error("VSBIL OAuth callback failed", error);
+        try { VSBIL_AUTH.clearSession(); } catch {}
+        fail(error instanceof Error ? error.message : "Unable to complete sign-in.");
+      }
+    })();
+  </script>
+</body>
+</html>
