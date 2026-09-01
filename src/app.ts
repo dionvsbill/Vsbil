@@ -83,7 +83,7 @@ app.use("/api/admin", adminRouter);
 app.get("/api/health", (_req, res) => res.json({ success: true, service: "VSBIL API", status: "online", environment: nodeEnv, time: new Date().toISOString() }));
 
 const publicDirectory = path.resolve(__dirname, "../public");
-const shellVersion = "20260831-4";
+const shellVersion = "20260901-2";
 const inject = (html: string) => {
   const shell = `\n<link rel="manifest" href="/manifest.webmanifest?v=${shellVersion}"><link rel="icon" href="/assets/vsbil-logo.svg" type="image/svg+xml"><meta name="theme-color" content="#070a12"><link rel="stylesheet" href="/css/brand.css?v=${shellVersion}"><link rel="stylesheet" href="/css/site-shell.css?v=${shellVersion}"><link rel="stylesheet" href="/css/theme-fixes.css?v=${shellVersion}"><link rel="stylesheet" href="/css/social.css?v=${shellVersion}"><script src="/js/site-shell.js?v=${shellVersion}" defer></script>`;
   const withHead = html.replace("</head>", `${html.includes("/js/site-shell.js") ? "" : shell}</head>`);
