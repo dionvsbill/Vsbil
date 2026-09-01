@@ -40,21 +40,16 @@
       message.textContent = text;
       details.textContent = "Returning to the login page…";
       details.className = "form-message error";
-
-      // Do not leave the user stranded on the callback page.
       window.setTimeout(() => redirectToLogin(text), 700);
     }
 
     function readOAuthResult() {
       const query = new URLSearchParams(window.location.search);
       const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-
       const error = query.get("error_description") || query.get("error") || hash.get("error_description") || hash.get("error");
       if (error) throw new Error(decodeURIComponent(error.replace(/\+/g, " ")));
-
       const accessToken = hash.get("access_token") || query.get("access_token");
       if (!accessToken) throw new Error("No authentication session was returned by Supabase.");
-
       return {
         accessToken,
         refreshToken: hash.get("refresh_token") || query.get("refresh_token") || null,
@@ -62,6 +57,19 @@
         expiresAt: hash.get("expires_at") || query.get("expires_at") || null,
         tokenType: hash.get("token_type") || query.get("token_type") || "bearer"
       };
+    }
+
+    function readJwtMetadata(token) {
+      try {
+        const part = token.split(".")[1];
+        if (!part) return {};
+        const normalized = part.replace(/-/g, "+").replace(/_/g, "/");
+        const json = decodeURIComponent(atob(normalized.padEnd(normalized.length + (4 - normalized.length % 4) % 4, "=")).split("").map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join(""));
+        const payload = JSON.parse(json);
+        return payload.user_metadata || {};
+      } catch {
+        return {};
+      }
     }
 
     (async () => {
@@ -75,14 +83,21 @@
 
         if (!data?.user) throw new Error("VSBIL profile not found.");
 
-        VSBIL_AUTH.saveSession(session, data.user);
+        const google = readJwtMetadata(session.accessToken);
+        const user = {
+          ...data.user,
+          avatarUrl: data.user.avatarUrl || data.user.avatar_url || google.avatar_url || google.picture || google.photo_url || null,
+          displayName: data.user.displayName || data.user.display_name || google.full_name || google.name || null,
+          googleEmail: google.email || null
+        };
+
+        VSBIL_AUTH.saveSession(session, user);
         history.replaceState({}, document.title, "/auth-callback.html");
 
         title.textContent = "You're signed in.";
-        message.textContent = `Welcome back, ${data.user.username || "VSBIL user"}. Opening your dashboard…`;
+        message.textContent = `Welcome back, ${user.username || user.displayName || "VSBIL user"}. Opening your dashboard…`;
         details.textContent = "";
         details.className = "form-message success";
-
         window.setTimeout(() => window.location.replace("/dashboard.html"), 450);
       } catch (error) {
         console.error("VSBIL OAuth callback failed", error);
