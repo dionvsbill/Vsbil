@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/auth.css">
   <style>
-    /* Authentication pages intentionally have no shared site footer. */
     body.auth-page .site-footer,
     body.auth-page footer,
     body.auth-page .global-footer { display:none !important; }
@@ -44,8 +43,14 @@
     document.getElementById('googleBtn')?.addEventListener('click', async () => {
       const b=document.getElementById('googleBtn'),m=document.getElementById('loginMessage');
       b.disabled=true;b.textContent='Connecting…';
-      try { const d=await window.VSBIL_AUTH.request('/api/auth/google'); if(!d?.url) throw new Error('Google authentication is not configured.'); window.location.assign(d.url); }
-      catch(e){m.textContent=e?.message||'Unable to connect to Google.';b.disabled=false;b.textContent='Continue with Google';}
+      try {
+        const d=await window.VSBIL_AUTH.request('/api/auth/production/google');
+        if(!d?.url) throw new Error('Google authentication is not configured.');
+        window.location.assign(d.url);
+      } catch(e) {
+        m.textContent=e?.message||'Unable to connect to Google.';
+        b.disabled=false;b.textContent='Continue with Google';
+      }
     });
   </script>
 </body>
