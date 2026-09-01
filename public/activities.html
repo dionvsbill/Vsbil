@@ -2,22 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#070a12">
-<meta name="description" content="Browse VSBIL YouTube watch, like and subscribe campaigns."><title>Available Campaigns — VSBIL</title>
+<meta name="description" content="Browse VSBIL YouTube watch, like and subscribe campaigns."><title>Campaigns — VSBIL</title>
 <link rel="stylesheet" href="/css/campaign.css">
 </head>
 <body>
 <main class="campaign-page">
-  <section class="campaign-panel">
-    <div class="campaign-head"><div><p class="eyebrow">OPPORTUNITIES</p><h1>Available Campaigns</h1><p class="campaign-note">Choose a campaign you qualify for. Watch, like and subscribe objectives are shown separately so you always know what is required.</p></div><a class="vs-btn primary" href="/creator.html">＋ Create Campaign</a></div>
-    <div class="campaign-grid" style="margin-top:18px">
-      <article class="campaign-card"><span class="type-pill">▶ WATCH</span><h3>Watch campaigns</h3><p>Complete genuine viewing tasks and submit them for verification.</p></article>
-      <article class="campaign-card"><span class="type-pill like">♡ LIKE</span><h3>Like campaigns</h3><p>Complete genuine like objectives using your own account where eligible.</p></article>
-      <article class="campaign-card"><span class="type-pill subscribe">＋ SUBSCRIBE</span><h3>Subscribe campaigns</h3><p>Complete genuine channel subscription objectives using your own YouTube account where eligible.</p></article>
-    </div>
+  <section class="campaign-panel catalog-hero">
+    <div class="campaign-head"><div><p class="eyebrow">VSBIL CAMPAIGNS</p><h1>Available Campaigns</h1><p class="campaign-note">Browse genuine watch, like and subscribe opportunities. Anyone can explore the catalog; earning participation is subject to program eligibility.</p></div><a class="vs-btn primary" href="/creator.html">＋ Create Campaign</a></div>
+    <div class="campaign-stats"><div><strong id="campaignCount">0</strong><span>Available</span></div><div><strong id="watchCount">0</strong><span>Watch</span></div><div><strong id="likeCount">0</strong><span>Like</span></div><div><strong id="subscribeCount">0</strong><span>Subscribe</span></div></div>
   </section>
-  <section id="activities" class="campaign-grid"><div class="campaign-panel"><p class="campaign-note">Loading campaigns…</p></div></section>
+  <section class="campaign-panel"><div class="campaign-head"><div><p class="eyebrow">FEATURED</p><h2>Featured opportunities</h2></div><span class="campaign-note">Latest active campaigns</span></div><div id="featured" class="campaign-grid featured-grid"><p class="campaign-note">Loading featured campaigns…</p></div></section>
+  <section class="campaign-panel"><div class="campaign-head"><div><p class="eyebrow">ALL OPPORTUNITIES</p><h2>Campaign catalog</h2></div><div class="catalog-filter"><button class="filter active" data-filter="all">All</button><button class="filter" data-filter="watch">Watch</button><button class="filter" data-filter="like">Like</button><button class="filter" data-filter="subscribe">Subscribe</button></div></div><div id="activities" class="campaign-grid" style="margin-top:18px"><p class="campaign-note">Loading campaigns…</p></div></section>
 </main>
-<script src="/js/auth-flow.js"></script>
-<script src="/js/app-shell.js"></script>
-<script src="/js/activities.js"></script>
+<script src="/js/auth-flow.js"></script><script src="/js/app-shell.js"></script><script src="/js/activities.js"></script>
 </body></html>
