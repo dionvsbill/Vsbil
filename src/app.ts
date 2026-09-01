@@ -48,10 +48,13 @@ app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { poli
 app.use(cors({ origin: (origin, cb) => { if (!origin) return cb(null, true); const normalized = normalizeOrigin(origin); if (!isProduction) return cb(null, true); return productionOrigins.has(normalized) ? cb(null, true) : cb(new Error("CORS origin denied")); }, credentials: true, methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], allowedHeaders: ["Content-Type", "Authorization", "Accept", "X-Requested-With", "X-Idempotency-Key", "X-Cron-Secret"], exposedHeaders: ["X-Request-Id"], optionsSuccessStatus: 204 }));
 app.use(express.json({ limit: "8mb", verify: (req, _res, buf) => { (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf); } }));
 app.use((req, res, next) => { res.setHeader("X-Request-Id", `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`); if (req.path.startsWith("/api/")) { res.setHeader("Cache-Control", "no-store"); res.setHeader("Pragma", "no-cache"); } next(); });
-app.use("/api/auth", rateLimit({ windowMs: 60000, max: 30, key: (req) => `${req.ip}:auth` }), authRouter);
-app.use("/api/auth/advanced", rateLimit({ windowMs: 60000, max: 12, key: (req) => `${req.ip}:advanced-auth` }), authAdvancedRouter);
+
+// Production authentication must be mounted before the legacy auth router.
+// Both routers expose /login and /google; Express uses the first matching route.
 app.use("/api/auth/production", rateLimit({ windowMs: 60000, max: 15, key: (req) => `${req.ip}:production-auth` }), authProductionRouter);
 app.use("/api/auth/production", authProductionPatchRouter);
+app.use("/api/auth", rateLimit({ windowMs: 60000, max: 30, key: (req) => `${req.ip}:auth` }), authRouter);
+app.use("/api/auth/advanced", rateLimit({ windowMs: 60000, max: 12, key: (req) => `${req.ip}:advanced-auth` }), authAdvancedRouter);
 app.use("/api/auth", rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.ip}:oauth` }), oauthRouter);
 app.use("/api/payment", rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.ip}:payment` }), paymentRouter);
 app.use("/api/youtube", rateLimit({ windowMs: 60000, max: 20, key: (req) => `${req.ip}:youtube` }), youtubeRouter);
