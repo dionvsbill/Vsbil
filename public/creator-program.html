@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Join the VSBIL Creator Program to create funded reward campaigns.">
+<title>Creator Program — VSBIL</title>
+<link rel="stylesheet" href="/css/campaign.css">
+<style>
+.program-wrap{max-width:900px;margin:0 auto;padding:32px 18px}.program-card{background:rgba(15,20,34,.96);border:1px solid rgba(255,255,255,.1);border-radius:22px;padding:28px;box-shadow:0 18px 60px rgba(0,0,0,.25)}.program-list{display:grid;gap:10px;margin:20px 0}.program-item{padding:14px 16px;border:1px solid rgba(255,255,255,.08);border-radius:14px}.program-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px}.program-msg{margin-top:16px}.program-msg.error{color:#ff8d8d}.program-msg.success{color:#7ee2a8}.terms{display:flex;gap:10px;align-items:flex-start;margin-top:18px}.terms input{margin-top:4px}
+</style>
+</head>
+<body>
+<main class="program-wrap">
+<section class="program-card">
+<p class="eyebrow">VSBIL CREATOR PROGRAM</p>
+<h1>Join the Creator Program</h1>
+<p class="campaign-note">Creator membership is required before you can create funded reward campaigns. Your membership is checked by the server on every campaign request.</p>
+<div id="status" class="campaign-card" style="margin-top:20px">Checking your creator program status…</div>
+<div class="program-list">
+<div class="program-item"><strong>Fund campaigns securely</strong><br><span class="campaign-note">Campaign budgets are reserved atomically from your available wallet balance.</span></div>
+<div class="program-item"><strong>Submit for review</strong><br><span class="campaign-note">New campaigns remain pending until VSBIL review activates them.</span></div>
+<div class="program-item"><strong>Creator standards</strong><br><span class="campaign-note">You agree to follow VSBIL rules, originality requirements and quality standards.</span></div>
+</div>
+<label class="terms"><input id="accept" type="checkbox"><span>I agree to the VSBIL Creator Program terms and understand that access can be suspended for abuse, fraud or policy violations.</span></label>
+<div class="program-actions">
+<button id="join" class="vs-btn primary" type="button">Join Creator Program</button>
+<a class="vs-btn" href="/creator.html">Back to Campaign Center</a>
+</div>
+<div id="msg" class="program-msg" aria-live="polite"></div>
+</section>
+</main>
+<script src="/js/auth-flow.js"></script>
+<script>
+"use strict";
+const $=s=>document.querySelector(s);const api=(p,o={})=>window.VSBIL_AUTH.api(p,o);
+async function load(){try{const d=await api('/api/creator-program/program');const s=$('#status');if(d.joined){s.innerHTML='<strong>✓ You are an active creator.</strong><br><span class="campaign-note">You can create funded campaigns.</span>';$('#join').textContent='Continue to Campaign Center';$('#join').onclick=()=>location.assign('/creator.html');$('#accept').disabled=true;return}if(d.activationRequired){s.innerHTML='<strong>Activation required</strong><br><span class="campaign-note">Activate your VSBIL earning account before joining the creator program.</span>';$('#join').disabled=true;$('#join').textContent='Activation Required';return}s.innerHTML='<strong>Not enrolled</strong><br><span class="campaign-note">Join the program to unlock campaign creation.</span>'}catch(e){$('#status').textContent='Unable to verify your creator program status. Please try again.';$('#join').disabled=true}}
+$('#join').addEventListener('click',async()=>{if($('#join').disabled||$('#accept').disabled)return;if(!$('#accept').checked){$('#msg').className='program-msg error';$('#msg').textContent='Accept the creator program terms to continue.';return}$('#join').disabled=true;$('#msg').className='program-msg';$('#msg').textContent='Joining…';try{const d=await api('/api/creator-program/program/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({acceptTerms:true})});$('#msg').className='program-msg success';$('#msg').textContent=d.message||'Creator program enabled.';setTimeout(()=>location.assign('/creator.html'),500)}catch(e){$('#msg').className='program-msg error';$('#msg').textContent=e?.message||'Unable to join creator program.';$('#join').disabled=false}});
+load();
+</script>
+</body>
+</html>
