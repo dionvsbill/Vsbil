@@ -22,7 +22,16 @@ create table if not exists public.feature_flags (
 
 insert into public.feature_flags(key,label,description,enabled) values
 ('creator_program','Creator Program','Creator campaign participation and funding.',true),
-('business_suite','Business Suite','Business/shop tools.',true),
+('business_suite','Business Suite','Business, shop, commerce and storefront tools.',true),
+('marketplace','Marketplace','Marketplace browsing and shopping.',true),
+('youtube','YouTube','YouTube connection and related tools.',true),
+('whatsapp','WhatsApp','WhatsApp Business automation.',true),
+('social','Community','Social/community features.',true),
+('social_monetization','Social Monetization','Social monetization features.',true),
+('activities','Activities','Campaign participation and activity feeds.',true),
+('jumia_import','Jumia Import','Jumia product import tools.',true),
+('support','Support','User support and reporting tools.',true),
+('verification','Verification','User verification workflows.',true),
 ('landlord','Landlord','Property and tenant management.',false),
 ('services','Services','Service marketplace/tools.',false),
 ('church','Church','Church management tools.',true),
