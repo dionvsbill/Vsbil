@@ -46,7 +46,7 @@ Configure the Paystack webhook to:
 
 `https://YOUR_DOMAIN/api/payment/webhook`
 
-The browser callback is only a convenience. Account activation and creator-program activation must depend on server-side verification/webhook processing. Paystack recommends server-side verification and webhook handling before delivering value. citeturn2search0turn0search6
+The browser callback is only a convenience. Account activation and creator-program activation must depend on server-side verification/webhook processing.
 
 ## 4. Authentication
 
