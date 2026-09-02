@@ -44,7 +44,10 @@
       const b=document.getElementById('googleBtn'),m=document.getElementById('loginMessage');
       b.disabled=true;b.textContent='Connecting…';
       try {
-        const d=await window.VSBIL_AUTH.request('/api/auth/production/google');
+        const params = new URLSearchParams(window.location.search);
+        const ref = (params.get('ref') || '').trim();
+        const endpoint = ref ? `/api/auth/google?ref=${encodeURIComponent(ref)}` : '/api/auth/google';
+        const d=await window.VSBIL_AUTH.request(endpoint);
         if(!d?.url) throw new Error('Google authentication is not configured.');
         window.location.assign(d.url);
       } catch(e) {
