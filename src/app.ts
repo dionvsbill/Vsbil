@@ -50,7 +50,7 @@ app.use(cors({origin:(origin,cb)=>{if(!origin)return cb(null,true);const normali
 app.use(express.json({limit:"8mb",verify:(req,_res,buf)=>{(req as express.Request&{rawBody?:Buffer}).rawBody=Buffer.from(buf)}}));
 app.use((req,res,next)=>{res.setHeader("X-Request-Id",`${Date.now().toString(36)}-${Math.random().toString(36).slice(2,10)}`);if(req.path.startsWith("/api/")){res.setHeader("Cache-Control","no-store");res.setHeader("Pragma","no-cache")}next()});
 
-// Safe public read-only feature state. Mutation remains admin-only.
+// Public read-only feature state. Only admins can mutate flags.
 app.get("/api/features",async(_req,res)=>{const keys=["creator_program","business_suite","landlord","services","church","funeral","activities","marketplace","youtube","whatsapp","social","social_monetization","jumia_import","support","verification"];const entries=await Promise.all(keys.map(async key=>[key,await featureEnabled(key)] as const));res.setHeader("Cache-Control","no-store");res.json({success:true,features:Object.fromEntries(entries)});});
 
 app.use("/api/auth/production",rateLimit({windowMs:60000,max:15,key:req=>`${req.ip}:production-auth`}),authProductionRouter);
@@ -81,8 +81,8 @@ app.use("/api/admin",supportAdminRouter);app.use("/api/admin",campaignAdminRoute
 app.get("/api/health",(_req,res)=>res.json({success:true,service:"VSBIL API",status:"online",environment:nodeEnv,time:new Date().toISOString()}));
 
 const publicDirectory=path.resolve(__dirname,"../public");
-const shellVersion="20260902-1";
-const inject=(html:string)=>{const shell=`\n<link rel="manifest" href="/manifest.webmanifest?v=${shellVersion}"><link rel="icon" href="/assets/vsbil-logo.svg" type="image/svg+xml"><meta name="theme-color" content="#070a12"><link rel="stylesheet" href="/css/brand.css?v=${shellVersion}"><link rel="stylesheet" href="/css/site-shell.css?v=${shellVersion}"><link rel="stylesheet" href="/css/theme-fixes.css?v=${shellVersion}"><link rel="stylesheet" href="/css/social.css?v=${shellVersion}"><script src="/js/site-shell.js?v=${shellVersion}" defer></script>`;const withHead=html.replace("</head>",`${html.includes("/js/site-shell.js")?"":shell}</head>`);return withHead.replace("</body>",`${html.includes("/js/pwa.js")?"":`<script src="/js/pwa.js?v=${shellVersion}" defer></script>`}</body>`)};
+const shellVersion="20260902-2";
+const inject=(html:string)=>{const shell=`\n<link rel="manifest" href="/manifest.webmanifest?v=${shellVersion}"><link rel="icon" href="/assets/vsbil-logo.svg" type="image/svg+xml"><meta name="theme-color" content="#070a12"><link rel="stylesheet" href="/css/brand.css?v=${shellVersion}"><link rel="stylesheet" href="/css/site-shell.css?v=${shellVersion}"><link rel="stylesheet" href="/css/theme-fixes.css?v=${shellVersion}"><link rel="stylesheet" href="/css/social.css?v=${shellVersion}"><script src="/js/site-shell.js?v=${shellVersion}" defer></script><script src="/js/feature-visibility.js?v=${shellVersion}" defer></script>`;const withHead=html.replace("</head>",`${html.includes("/js/site-shell.js")?"":shell}</head>`);return withHead.replace("</body>",`${html.includes("/js/pwa.js")?"":`<script src="/js/pwa.js?v=${shellVersion}" defer></script>`}</body>`)};
 const send=async(file:string,res:express.Response,next:express.NextFunction)=>{try{const html=await readFile(file,"utf8");return res.status(200).type("html").setHeader("X-Content-Type-Options","nosniff").setHeader("Cache-Control","no-store").send(inject(html))}catch(error:any){if(error?.code==="ENOENT")return next();return next(error)}};
 
 const pageFeatureByPath: Record<string,string> = { "/landlord.html":"landlord", "/services.html":"services", "/church.html":"church", "/funeral.html":"funeral" };
