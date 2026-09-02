@@ -13,7 +13,6 @@ create table if not exists public.creator_program_enrollments (
   updated_at timestamptz not null default now()
 );
 
--- Existing installations may already have the older three-value status constraint.
 do $$ declare c record; begin
   for c in select conname from pg_constraint where conrelid='public.creator_program_enrollments'::regclass and contype='c' and pg_get_constraintdef(oid) like '%status%' loop
     execute format('alter table public.creator_program_enrollments drop constraint %I',c.conname);
@@ -50,7 +49,7 @@ begin
     now(),true,true,now()
   )
   on conflict (user_id) do update set
-    status=case when public.users.status='active' then 'active' else 'pending_activation' end,
+    status=case when (select status from public.users where id=p_user_id)='active' then 'active' else 'pending_activation' end,
     accepted_terms_at=coalesce(public.creator_program_enrollments.accepted_terms_at,excluded.accepted_terms_at),
     updated_at=now()
   returning * into e;
@@ -101,9 +100,6 @@ begin
 end;
 $$;
 
--- Creator campaign funding is allowed only for an active creator-program member.
--- This check is inside the same transaction as the wallet reservation, so a
--- client cannot bypass the UI and call the campaign endpoint directly.
 create or replace function public.create_funded_activity(
   p_user_id uuid,
   p_title text,
