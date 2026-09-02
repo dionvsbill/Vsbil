@@ -5,11 +5,16 @@ import { requireIdentity } from "../middleware/authMiddleware.js";
 const router = Router();
 
 router.get("/program", requireIdentity, async (req, res) => {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("creator_program_enrollments")
     .select("status,accepted_terms_at,originality_required,quality_required")
     .eq("user_id", req.user!.id)
     .maybeSingle();
+
+  if (error) {
+    console.error("creator program status", error);
+    return res.status(500).json({ success: false, message: "Unable to load creator program status" });
+  }
 
   return res.json({
     success: true,
@@ -21,46 +26,45 @@ router.get("/program", requireIdentity, async (req, res) => {
 });
 
 router.post("/program/join", requireIdentity, async (req, res) => {
-  if (req.user!.status !== "active") {
-    return res.status(403).json({
+  if (req.body?.acceptTerms !== true) {
+    return res.status(400).json({
       success: false,
-      message: "Activate your VSBIL earning account before joining the creator earning program.",
-      code: "ACTIVATION_REQUIRED",
+      message: "You must accept the creator program terms",
+      code: "TERMS_REQUIRED",
     });
   }
 
-  if (req.body?.acceptTerms !== true) {
-    return res.status(400).json({ success: false, message: "You must accept the creator program terms" });
+  const { data, error } = await supabase.rpc("join_creator_program", {
+    p_user_id: req.user!.id,
+  });
+
+  if (error) {
+    console.error("creator program join", error);
+    if (error.message === "ACTIVATION_REQUIRED") {
+      return res.status(403).json({
+        success: false,
+        message: "Activate your VSBIL earning account before joining the creator earning program.",
+        code: "ACTIVATION_REQUIRED",
+      });
+    }
+    return res.status(500).json({ success: false, message: "Unable to join creator program" });
   }
 
-  const { data, error } = await supabase
-    .from("creator_program_enrollments")
-    .upsert({
-      user_id: req.user!.id,
-      status: "active",
-      accepted_terms_at: new Date().toISOString(),
-    }, { onConflict: "user_id" })
-    .select("status,accepted_terms_at,originality_required,quality_required")
-    .single();
-
-  if (error) return res.status(500).json({ success: false, message: "Unable to join creator program" });
-
-  const { error: userError } = await supabase
-    .from("users")
-    .update({ content_participant: true })
-    .eq("id", req.user!.id);
-
-  if (userError) return res.status(500).json({ success: false, message: "Unable to activate creator participation" });
-
-  return res.json({ success: true, program: data, message: "Creator participation enabled" });
+  return res.json({
+    success: true,
+    program: data,
+    message: "Creator participation enabled",
+  });
 });
 
 router.post("/program/leave", requireIdentity, async (req, res) => {
-  await supabase
-    .from("creator_program_enrollments")
-    .update({ status: "left", updated_at: new Date().toISOString() })
-    .eq("user_id", req.user!.id);
-  await supabase.from("users").update({ content_participant: false }).eq("id", req.user!.id);
+  const { error } = await supabase.rpc("leave_creator_program", {
+    p_user_id: req.user!.id,
+  });
+  if (error) {
+    console.error("creator program leave", error);
+    return res.status(500).json({ success: false, message: "Unable to leave creator program" });
+  }
   return res.json({ success: true, message: "Creator participation disabled" });
 });
 
