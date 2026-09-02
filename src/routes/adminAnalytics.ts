@@ -1,76 +1,9 @@
 import { Router } from "express";
 import { supabase } from "../config/supabase.js";
-import { requireAuth, requireAdmin } from "../middleware/authMiddleware.js";
-
-const router = Router();
-router.use(requireAuth, requireAdmin);
-
-const isoDays = (days: number) => Array.from({ length: days }, (_, i) => {
-  const d = new Date();
-  d.setUTCHours(0, 0, 0, 0);
-  d.setUTCDate(d.getUTCDate() - (days - 1 - i));
-  return d.toISOString().slice(0, 10);
-});
-
-router.get("/analytics", async (_req, res) => {
-  try {
-    const days = isoDays(30);
-    const start = `${days[0]}T00:00:00.000Z`;
-    const [{ data: users }, { data: payments }, { data: withdrawals }, { data: submissions }, { data: security }] = await Promise.all([
-      supabase.from("users").select("created_at,status").gte("created_at", start),
-      supabase.from("payments").select("created_at,amount,status,purpose").gte("created_at", start),
-      supabase.from("withdrawals").select("created_at,amount,status").gte("created_at", start),
-      supabase.from("activity_submissions").select("created_at,status,reward_amount").gte("created_at", start),
-      supabase.from("account_security_events").select("created_at,severity,event_type").gte("created_at", start),
-    ]);
-    const bucket = (rows: any[] | null, value: (row: any) => number = () => 1) => days.map(day => ({ day, value: (rows ?? []).filter(r => String(r.created_at ?? "").slice(0, 10) === day).reduce((n, r) => n + value(r), 0) }));
-    const successfulPayments = (payments ?? []).filter(p => p.status === "success");
-    const approvedWithdrawals = (withdrawals ?? []).filter(w => ["approved", "paid"].includes(w.status));
-    const approvedSubmissions = (submissions ?? []).filter(s => s.status === "approved");
-    const money = (n: number) => Math.round(Number(n || 0));
-    const byPurpose = new Map<string, number>();
-    successfulPayments.forEach(p => byPurpose.set(String(p.purpose || "other"), (byPurpose.get(String(p.purpose || "other")) || 0) + money(p.amount)));
-    const severity = new Map<string, number>();
-    (security ?? []).forEach(s => severity.set(String(s.severity || "unknown"), (severity.get(String(s.severity || "unknown")) || 0) + 1));
-    res.json({
-      success: true,
-      generatedAt: new Date().toISOString(),
-      range: { days: 30, start, end: new Date().toISOString() },
-      kpis: {
-        newUsers: users?.length ?? 0,
-        activeUsers: (users ?? []).filter(u => u.status === "active").length,
-        successfulPayments: successfulPayments.length,
-        paymentVolume: successfulPayments.reduce((n, p) => n + money(p.amount), 0),
-        approvedWithdrawals: approvedWithdrawals.length,
-        withdrawalVolume: approvedWithdrawals.reduce((n, w) => n + money(w.amount), 0),
-        approvedSubmissions: approvedSubmissions.length,
-        securityEvents: security?.length ?? 0,
-      },
-      series: {
-        users: bucket(users),
-        payments: bucket(successfulPayments, p => money(p.amount)),
-        withdrawals: bucket(approvedWithdrawals, w => money(w.amount)),
-        submissions: bucket(approvedSubmissions),
-        security: bucket(security),
-      },
-      paymentPurpose: Array.from(byPurpose, ([name, value]) => ({ name, value })),
-      securitySeverity: Array.from(severity, ([name, value]) => ({ name, value })),
-    });
-  } catch (error) {
-    console.error("Admin analytics", error);
-    res.status(500).json({ success: false, message: "Unable to load admin analytics" });
-  }
-});
-
-router.get("/session", (req, res) => {
-  res.json({ success: true, user: { id: req.user!.id, email: req.user!.email, username: req.user!.username, role: req.user!.role, status: req.user!.status } });
-});
-
-router.get("/realtime-config", (_req, res) => {
-  const url = String(process.env.SUPABASE_URL || "").trim();
-  const key = String(process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || "").trim();
-  if (!url || !key) return res.status(503).json({ success: false, message: "Realtime configuration is unavailable" });
-  res.json({ success: true, url, key });
-});
-
+import { requireAuth, requireAdmin, requireSupportAdmin } from "../middleware/authMiddleware.js";
+const router=Router();router.use(requireAuth);
+router.get("/session",requireSupportAdmin,(req,res)=>res.json({success:true,user:{id:req.user!.id,email:req.user!.email,username:req.user!.username,role:req.user!.role,status:req.user!.status}}));
+router.get("/realtime-config",requireSupportAdmin,(_req,res)=>{const url=String(process.env.SUPABASE_URL||"").trim();const key=String(process.env.SUPABASE_ANON_KEY||process.env.SUPABASE_PUBLISHABLE_KEY||"").trim();if(!url||!key)return res.status(503).json({success:false,message:"Realtime configuration is unavailable"});res.json({success:true,url,key});});
+const isoDays=(days:number)=>Array.from({length:days},(_,i)=>{const d=new Date();d.setUTCHours(0,0,0,0);d.setUTCDate(d.getUTCDate()-(days-1-i));return d.toISOString().slice(0,10);});
+router.get("/analytics",requireAdmin,async(_req,res)=>{try{const days=isoDays(30);const start=`${days[0]}T00:00:00.000Z`;const [{data:users},{data:payments},{data:withdrawals},{data:submissions},{data:security}]=await Promise.all([supabase.from("users").select("created_at,status").gte("created_at",start),supabase.from("payments").select("created_at,amount,status,purpose").gte("created_at",start),supabase.from("withdrawals").select("created_at,amount,status").gte("created_at",start),supabase.from("activity_submissions").select("created_at,status,reward_amount").gte("created_at",start),supabase.from("account_security_events").select("created_at,severity,event_type").gte("created_at",start)]);const bucket=(rows:any[]|null,value:(row:any)=>number=()=>1)=>days.map(day=>({day,value:(rows??[]).filter(r=>String(r.created_at??"").slice(0,10)===day).reduce((n,r)=>n+value(r),0)}));const successfulPayments=(payments??[]).filter(p=>p.status==="success");const approvedWithdrawals=(withdrawals??[]).filter(w=>["approved","paid"].includes(w.status));const approvedSubmissions=(submissions??[]).filter(s=>s.status==="approved");const money=(n:number)=>Math.round(Number(n||0));const byPurpose=new Map<string,number>();successfulPayments.forEach(p=>byPurpose.set(String(p.purpose||"other"),(byPurpose.get(String(p.purpose||"other"))||0)+money(p.amount)));const severity=new Map<string,number>();(security??[]).forEach(s=>severity.set(String(s.severity||"unknown"),(severity.get(String(s.severity||"unknown"))||0)+1));res.json({success:true,generatedAt:new Date().toISOString(),range:{days:30,start,end:new Date().toISOString()},kpis:{newUsers:users?.length??0,activeUsers:(users??[]).filter(u=>u.status==="active").length,successfulPayments:successfulPayments.length,paymentVolume:successfulPayments.reduce((n,p)=>n+money(p.amount),0),approvedWithdrawals:approvedWithdrawals.length,withdrawalVolume:approvedWithdrawals.reduce((n,w)=>n+money(w.amount),0),approvedSubmissions:approvedSubmissions.length,securityEvents:security?.length??0},series:{users:bucket(users),payments:bucket(successfulPayments,p=>money(p.amount)),withdrawals:bucket(approvedWithdrawals,w=>money(w.amount)),submissions:bucket(approvedSubmissions),security:bucket(security)},paymentPurpose:Array.from(byPurpose,([name,value])=>({name,value})),securitySeverity:Array.from(severity,([name,value])=>({name,value}))});}catch(error){console.error("Admin analytics",error);res.status(500).json({success:false,message:"Unable to load admin analytics"});}});
 export default router;
