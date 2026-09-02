@@ -1,6 +1,8 @@
 -- VSBIL PRODUCTION ADMIN RBAC + USER DATA RESET
 -- Run this file manually in Supabase SQL Editor after reviewing it.
 -- The reset is intentionally guarded by an explicit confirmation string.
+-- Optional VSBIL tables are checked before deletion so this migration works
+-- against installations where a feature has not been enabled yet.
 
 begin;
 
@@ -53,33 +55,58 @@ begin
   end if;
 
   -- Remove application/user data first. Configuration and schema are preserved.
-  -- auth.users is handled last so Supabase Auth accounts for deleted application users are removed too.
-  delete from public.campaign_participation_history where user_id <> super_id;
-  delete from public.user_security_devices where user_id <> super_id;
-  delete from public.account_security_events where user_id <> super_id;
-  delete from public.activity_submissions where user_id <> super_id;
-  delete from public.withdrawals where user_id <> super_id;
-  delete from public.wallet_ledger where user_id <> super_id;
-  delete from public.wallets where user_id <> super_id;
-  delete from public.payments where user_id <> super_id;
-  delete from public.referrals where referrer_id <> super_id and referred_user_id <> super_id;
-  delete from public.support_tickets where user_id <> super_id;
-  delete from public.notifications where user_id <> super_id;
-  delete from public.business_shops where user_id <> super_id;
-  delete from public.audit_logs where admin_id <> super_id;
-  delete from public.creator_enrollments where user_id <> super_id;
-
-  -- User-created campaigns/activities are application data. Keep none from old users.
-  delete from public.activities where created_by is not null and created_by <> super_id;
+  -- Feature-specific tables are optional; only delete from them when they exist.
+  if to_regclass('public.campaign_participation_history') is not null then
+    delete from public.campaign_participation_history where user_id <> super_id;
+  end if;
+  if to_regclass('public.user_security_devices') is not null then
+    delete from public.user_security_devices where user_id <> super_id;
+  end if;
+  if to_regclass('public.account_security_events') is not null then
+    delete from public.account_security_events where user_id <> super_id;
+  end if;
+  if to_regclass('public.activity_submissions') is not null then
+    delete from public.activity_submissions where user_id <> super_id;
+  end if;
+  if to_regclass('public.withdrawals') is not null then
+    delete from public.withdrawals where user_id <> super_id;
+  end if;
+  if to_regclass('public.wallet_ledger') is not null then
+    delete from public.wallet_ledger where user_id <> super_id;
+  end if;
+  if to_regclass('public.wallets') is not null then
+    delete from public.wallets where user_id <> super_id;
+  end if;
+  if to_regclass('public.payments') is not null then
+    delete from public.payments where user_id <> super_id;
+  end if;
+  if to_regclass('public.referrals') is not null then
+    delete from public.referrals where referrer_id <> super_id and referred_user_id <> super_id;
+  end if;
+  if to_regclass('public.support_tickets') is not null then
+    delete from public.support_tickets where user_id <> super_id;
+  end if;
+  if to_regclass('public.notifications') is not null then
+    delete from public.notifications where user_id <> super_id;
+  end if;
+  if to_regclass('public.business_shops') is not null then
+    delete from public.business_shops where user_id <> super_id;
+  end if;
+  if to_regclass('public.audit_logs') is not null then
+    delete from public.audit_logs where admin_id <> super_id;
+  end if;
+  if to_regclass('public.creator_enrollments') is not null then
+    delete from public.creator_enrollments where user_id <> super_id;
+  end if;
+  if to_regclass('public.activities') is not null then
+    delete from public.activities where created_by is not null and created_by <> super_id;
+  end if;
 
   -- Remove all application profiles except the protected super administrator.
   delete from public.users where id <> super_id;
 
   -- Remove deleted users' Supabase Auth identities if the SQL editor has permission.
   delete from auth.users where id <> super_id;
-exception
-  when undefined_table then
-    raise exception 'A referenced VSBIL table is missing. Review this migration before retrying: %', sqlerrm;
 end $$;
 
 -- Make sure the preserved account remains the only Super Admin after the reset.
