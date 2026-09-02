@@ -5,13 +5,21 @@ create extension if not exists pgcrypto;
 
 create table if not exists public.creator_program_enrollments (
   user_id uuid primary key references public.users(id) on delete cascade,
-  status text not null default 'active' check (status in ('active','left','suspended')),
+  status text not null default 'pending_activation' check (status in ('pending_activation','active','left','suspended')),
   accepted_terms_at timestamptz,
   originality_required boolean not null default true,
   quality_required boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Existing installations may already have the older three-value status constraint.
+do $$ declare c record; begin
+  for c in select conname from pg_constraint where conrelid='public.creator_program_enrollments'::regclass and contype='c' and pg_get_constraintdef(oid) like '%status%' loop
+    execute format('alter table public.creator_program_enrollments drop constraint %I',c.conname);
+  end loop;
+  alter table public.creator_program_enrollments add constraint creator_program_enrollments_status_check check (status in ('pending_activation','active','left','suspended'));
+exception when duplicate_object then null; end $$;
 
 alter table public.creator_program_enrollments add column if not exists accepted_terms_at timestamptz;
 alter table public.creator_program_enrollments add column if not exists originality_required boolean not null default true;
@@ -28,25 +36,28 @@ returns public.creator_program_enrollments
 language plpgsql security definer set search_path = public
 as $$
 declare e public.creator_program_enrollments;
+  u_status text;
 begin
-  if not exists (select 1 from public.users where id=p_user_id and status='active') then
-    raise exception 'ACTIVATION_REQUIRED';
-  end if;
+  select status into u_status from public.users where id=p_user_id for update;
+  if not found then raise exception 'USER_NOT_FOUND'; end if;
+  if u_status in ('suspended','banned','disabled') then raise exception 'ACCOUNT_RESTRICTED'; end if;
 
   insert into public.creator_program_enrollments(
     user_id,status,accepted_terms_at,originality_required,quality_required,updated_at
   ) values (
-    p_user_id,'active',now(),true,true,now()
+    p_user_id,
+    case when u_status='active' then 'active' else 'pending_activation' end,
+    now(),true,true,now()
   )
   on conflict (user_id) do update set
-    status='active',
+    status=case when public.users.status='active' then 'active' else 'pending_activation' end,
     accepted_terms_at=coalesce(public.creator_program_enrollments.accepted_terms_at,excluded.accepted_terms_at),
     updated_at=now()
   returning * into e;
 
   update public.users
-  set content_participant=true
-  where id=p_user_id and status='active';
+  set content_participant=(e.status='active')
+  where id=p_user_id;
 
   return e;
 end;
@@ -62,6 +73,31 @@ begin
   where user_id=p_user_id;
   update public.users set content_participant=false where id=p_user_id;
   return true;
+end;
+$$;
+
+-- Called by the trusted payment service only after the existing VSBIL account
+-- activation payment has been verified. It never accepts an amount from the client.
+create or replace function public.activate_creator_program_after_account_activation(p_user_id uuid)
+returns public.creator_program_enrollments
+language plpgsql security definer set search_path = public
+as $$
+declare e public.creator_program_enrollments;
+begin
+  if not exists (select 1 from public.users where id=p_user_id and status='active') then
+    raise exception 'ACTIVATION_REQUIRED';
+  end if;
+
+  update public.creator_program_enrollments
+  set status='active',updated_at=now()
+  where user_id=p_user_id and status='pending_activation'
+  returning * into e;
+
+  if e.user_id is not null then
+    update public.users set content_participant=true where id=p_user_id;
+  end if;
+
+  return e;
 end;
 $$;
 
