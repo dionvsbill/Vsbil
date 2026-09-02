@@ -9,11 +9,17 @@ const audit = async (adminId: string, action: string, entityType: string, entity
   await supabase.from("audit_logs").insert({ admin_id: adminId, action, entity_type: entityType, entity_id: entityId, metadata });
 };
 
+const stringParam = (value: string | string[] | undefined): string | null => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+  return null;
+};
+
 const validId = (value: unknown) => typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value);
 
 router.get("/users/:id/intelligence", async (req: Request, res: Response) => {
-  if (!validId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid user id" });
-  const id = req.params.id;
+  const id = stringParam(req.params.id);
+  if (!validId(id)) return res.status(400).json({ success: false, message: "Invalid user id" });
   const [user, wallet, payments, referralsOut, referralIn, ledger, withdrawals, submissions, activities, devices, security, participation, notifications, shops, userAudit] = await Promise.all([
     supabase.from("users").select("id,email,username,role,status,referral_code,referred_by,is_verified,verified_at,verified_by,verification_note,email_verified_at,google_verified_at,phone_verified_at,last_login_at,last_active_at,suspended_at,suspension_reason,created_at,updated_at").eq("id", id).maybeSingle(),
     supabase.from("wallets").select("*").eq("user_id", id).maybeSingle(),
@@ -38,7 +44,7 @@ router.get("/users/:id/intelligence", async (req: Request, res: Response) => {
 });
 
 router.patch("/users/:id/verification", async (req: Request, res: Response) => {
-  const id = req.params.id;
+  const id = stringParam(req.params.id);
   const verified = Boolean(req.body?.verified);
   const note = String(req.body?.note ?? "").slice(0, 1000);
   if (!validId(id)) return res.status(400).json({ success: false, message: "Invalid user id" });
@@ -50,7 +56,7 @@ router.patch("/users/:id/verification", async (req: Request, res: Response) => {
 });
 
 router.patch("/shops/:id/verification", async (req: Request, res: Response) => {
-  const id = req.params.id;
+  const id = stringParam(req.params.id);
   const verified = Boolean(req.body?.verified);
   const note = String(req.body?.note ?? "").slice(0, 1000);
   if (!validId(id)) return res.status(400).json({ success: false, message: "Invalid shop id" });
@@ -76,7 +82,7 @@ router.get("/feature-flags", async (_req, res) => {
 });
 
 router.patch("/feature-flags/:key", async (req: Request, res: Response) => {
-  const key = String(req.params.key ?? "").trim();
+  const key = stringParam(req.params.key) ?? "";
   const enabled = req.body?.enabled;
   if (!/^[a-z0-9_-]{2,50}$/.test(key) || typeof enabled !== "boolean") return res.status(400).json({ success: false, message: "Invalid feature flag update" });
   const { data, error } = await supabase.from("feature_flags").update({ enabled, updated_by: req.user!.id, updated_at: new Date().toISOString() }).eq("key", key).select("*").maybeSingle();
