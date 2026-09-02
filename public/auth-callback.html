@@ -74,6 +74,8 @@
 
     (async () => {
       try {
+        const query = new URLSearchParams(window.location.search);
+        const referralCode = (query.get("ref") || "").trim().toUpperCase();
         const session = readOAuthResult();
         message.textContent = "Validating your VSBIL account…";
 
@@ -82,6 +84,24 @@
         });
 
         if (!data?.user) throw new Error("VSBIL profile not found.");
+
+        // Referral attribution is performed by the trusted backend after the OAuth session is verified.
+        if (referralCode) {
+          try {
+            await fetch("/api/auth/attach-referral", {
+              method: "POST",
+              headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${session.accessToken}`
+              },
+              credentials: "same-origin",
+              body: JSON.stringify({ referralCode })
+            });
+          } catch (referralError) {
+            console.warn("Referral attribution could not be completed", referralError);
+          }
+        }
 
         const google = readJwtMetadata(session.accessToken);
         const user = {
