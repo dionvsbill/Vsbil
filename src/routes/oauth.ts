@@ -4,6 +4,7 @@ import { supabase } from "../config/supabase.js";
 const router = Router();
 const REFERRAL_PATTERN = /^[A-Z0-9_-]{1,50}$/i;
 const NEW_ACCOUNT_WINDOW_MS = 15 * 60 * 1000;
+const REFERRAL_COOKIE = "vsbil_referral";
 
 function normalizeReferral(value: unknown): string | null {
   const code = typeof value === "string" ? value.trim().toUpperCase() : "";
@@ -24,19 +25,32 @@ router.get("/google", async (req: Request, res: Response) => {
   }
 
   const referralCode = normalizeReferral(req.query.ref);
-  const redirectTo = new URL(`${appUrl}/auth-callback.html`);
-  if (referralCode) redirectTo.searchParams.set("ref", referralCode);
+  if (referralCode) {
+    res.cookie(REFERRAL_COOKIE, referralCode, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: NEW_ACCOUNT_WINDOW_MS,
+      path: "/",
+    });
+  } else {
+    res.clearCookie(REFERRAL_COOKIE, { httpOnly: true, sameSite: "lax", path: "/" });
+  }
 
-  const url = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo.toString())}`;
-  return res.json({ success: true, url, referralPreserved: Boolean(referralCode) });
+  // Keep the OAuth redirect URL fixed so it remains on the Supabase allow-list.
+  const redirectTo = `${appUrl}/auth-callback.html`;
+  const authorize = new URL(`${supabaseUrl}/auth/v1/authorize`);
+  authorize.searchParams.set("provider", "google");
+  authorize.searchParams.set("redirect_to", redirectTo);
+  return res.json({ success: true, url: authorize.toString(), referralPreserved: Boolean(referralCode) });
 });
 
 router.post("/attach-referral", async (req: Request, res: Response) => {
   try {
     const accessToken = bearer(req);
-    const referralCode = normalizeReferral(req.body?.referralCode);
+    const referralCode = normalizeReferral(req.cookies?.[REFERRAL_COOKIE]) || normalizeReferral(req.body?.referralCode);
     if (!accessToken) return res.status(401).json({ success: false, message: "Authentication is required.", code: "AUTH_REQUIRED" });
-    if (!referralCode) return res.status(400).json({ success: false, message: "Referral code is invalid.", code: "INVALID_REFERRAL_CODE" });
+    if (!referralCode) return res.status(400).json({ success: false, message: "Referral code is invalid or missing.", code: "INVALID_REFERRAL_CODE" });
 
     const { data: auth, error: authError } = await supabase.auth.getUser(accessToken);
     if (authError || !auth.user) return res.status(401).json({ success: false, message: "Your Google session is invalid or expired.", code: "INVALID_TOKEN" });
@@ -44,10 +58,14 @@ router.post("/attach-referral", async (req: Request, res: Response) => {
     const { data: user, error: userError } = await supabase.from("users").select("id,referred_by,created_at").eq("id", auth.user.id).maybeSingle();
     if (userError || !user) return res.status(404).json({ success: false, message: "Your VSBIL profile could not be found.", code: "PROFILE_NOT_FOUND" });
 
-    // Referral attribution is immutable and only available immediately after a new account is created.
-    if (user.referred_by) return res.json({ success: true, attached: false, reason: "REFERRAL_ALREADY_SET" });
+    if (user.referred_by) {
+      res.clearCookie(REFERRAL_COOKIE, { httpOnly: true, sameSite: "lax", path: "/" });
+      return res.json({ success: true, attached: false, reason: "REFERRAL_ALREADY_SET" });
+    }
+
     const createdAt = new Date(user.created_at).getTime();
     if (!Number.isFinite(createdAt) || Date.now() - createdAt > NEW_ACCOUNT_WINDOW_MS) {
+      res.clearCookie(REFERRAL_COOKIE, { httpOnly: true, sameSite: "lax", path: "/" });
       return res.json({ success: true, attached: false, reason: "ACCOUNT_NOT_NEW" });
     }
 
@@ -59,6 +77,7 @@ router.post("/attach-referral", async (req: Request, res: Response) => {
     const { data: updated, error: updateError } = await supabase.from("users").update({ referred_by: referrer.id, updated_at: new Date().toISOString() }).eq("id", user.id).is("referred_by", null).select("id,referred_by").maybeSingle();
     if (updateError) return res.status(500).json({ success: false, message: "Unable to save the referral attribution.", code: "REFERRAL_UPDATE_FAILED" });
 
+    res.clearCookie(REFERRAL_COOKIE, { httpOnly: true, sameSite: "lax", path: "/" });
     return res.json({ success: true, attached: Boolean(updated), referralCode });
   } catch (error) {
     console.error("Google referral attribution failed", error);
