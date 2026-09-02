@@ -16,12 +16,13 @@ router.get("/program", requireIdentity, async (req, res) => {
     return res.status(500).json({ success: false, message: "Unable to load creator program status" });
   }
 
+  const status = data?.status ?? null;
   return res.json({
     success: true,
-    joined: Boolean(data && data.status === "active"),
+    joined: status === "active",
     program: data ?? null,
-    activationRequired: req.user!.status !== "active",
-    earningEligible: Boolean(req.user!.status === "active" && data?.status === "active"),
+    activationRequired: status === "pending_activation" || req.user!.status !== "active",
+    earningEligible: Boolean(req.user!.status === "active" && status === "active"),
   });
 });
 
@@ -40,20 +41,25 @@ router.post("/program/join", requireIdentity, async (req, res) => {
 
   if (error) {
     console.error("creator program join", error);
-    if (error.message === "ACTIVATION_REQUIRED") {
+    if (error.message === "ACCOUNT_RESTRICTED") {
       return res.status(403).json({
         success: false,
-        message: "Activate your VSBIL earning account before joining the creator earning program.",
-        code: "ACTIVATION_REQUIRED",
+        message: "This account cannot join the creator program.",
+        code: "ACCOUNT_RESTRICTED",
       });
     }
     return res.status(500).json({ success: false, message: "Unable to join creator program" });
   }
 
+  const pendingActivation = data?.status === "pending_activation";
   return res.json({
     success: true,
     program: data,
-    message: "Creator participation enabled",
+    activationRequired: pendingActivation,
+    message: pendingActivation
+      ? "Creator program joined. Activate your VSBIL account to unlock creator campaigns."
+      : "Creator participation enabled",
+    redirect: pendingActivation ? "/activation.html?next=creator-program" : "/creator.html",
   });
 });
 
