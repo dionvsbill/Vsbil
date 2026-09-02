@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/auth.css">
   <style>
-    /* Authentication pages intentionally have no shared site footer. */
     body.auth-page .site-footer,
     body.auth-page footer,
     body.auth-page .global-footer { display:none !important; }
@@ -24,6 +23,8 @@
         <h1 id="registerTitle">Create your account.</h1>
         <p>Join VSBIL and discover eligible campaigns, rewards and creator opportunities.</p>
       </div>
+      <button type="button" class="secondary-btn auth-login" id="googleRegisterBtn">Continue with Google</button>
+      <div class="auth-divider"><span>or create with email</span></div>
       <form id="registerForm" novalidate>
         <div class="form-group"><label for="username">Username</label><input id="username" name="username" type="text" placeholder="Choose a username" minlength="3" maxlength="30" autocomplete="username" required></div>
         <div class="form-group"><label for="email">Email address</label><input id="email" name="email" type="email" placeholder="you@example.com" autocomplete="email" required></div>
