@@ -1,5 +1,6 @@
 import "dotenv/config";
 import app from "./app.js";
+import businessCommerceRouter from "./routes/businessCommerce.js";
 import shopExpansionRouter from "./routes/shopExpansion.js";
 import shopJumiaRouter from "./routes/shopJumia.js";
 import shopSettingsRouter from "./routes/shopSettings.js";
@@ -12,10 +13,12 @@ if (isProduction) {
   if (missing.length) throw new Error(`Missing production environment variables: ${missing.join(", ")}`);
 }
 
-// New shop APIs are additive. Existing Business Suite commerce routes remain unchanged.
-app.use("/api/shop", shopExpansionRouter);
-app.use("/api/shop-jumia", shopJumiaRouter);
-app.use("/api/shop-settings", shopSettingsRouter);
+// Extend the already-mounted Business Commerce router so the existing /api/* catch-all
+// cannot shadow these additive endpoints.
+businessCommerceRouter.use("/shop", shopExpansionRouter);
+businessCommerceRouter.use("/shop-jumia", shopJumiaRouter);
+businessCommerceRouter.use("/shop-settings", shopSettingsRouter);
+
 app.get("/dashboard/shop/create", (_req, res) => res.sendFile("shop-create.html", { root: "public" }));
 app.get("/dashboard/shop/:id", (_req, res) => res.sendFile("shop-dashboard.html", { root: "public" }));
 app.get("/shop/:slug", (_req, res) => res.sendFile("shop-store.html", { root: "public" }));
