@@ -33,5 +33,4 @@ const shutdown = (signal: string) => {
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("unhandledRejection", reason => console.error("Unhandled promise rejection", reason));
-process.on("uncaughtRejection", reason => console.error("Unhandled promise rejection", reason));
 process.on("uncaughtException", error => { console.error("Uncaught exception", error); shutdown("uncaughtException"); });
