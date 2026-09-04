@@ -1,6 +1,7 @@
 import "dotenv/config";
 import app from "./app.js";
 import shopExpansionRouter from "./routes/shopExpansion.js";
+import shopJumiaRouter from "./routes/shopJumia.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 const isProduction = process.env.NODE_ENV === "production";
@@ -12,8 +13,10 @@ if (isProduction) {
 
 // New shop APIs are additive. Existing Business Suite commerce routes remain unchanged.
 app.use("/api/shop", shopExpansionRouter);
+app.use("/api/shop-jumia", shopJumiaRouter);
 app.get("/dashboard/shop/create", (_req, res) => res.sendFile("shop-create.html", { root: "public" }));
 app.get("/dashboard/shop/:id", (_req, res) => res.sendFile("shop-dashboard.html", { root: "public" }));
+app.get("/shop/:slug", (_req, res) => res.sendFile("shop-store.html", { root: "public" }));
 
 const server = app.listen(PORT, () => console.log(`VSBIL API listening on port ${PORT}`));
 
