@@ -13,6 +13,8 @@
       const response = await fetch("/api/business-commerce/shops", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` }, body: JSON.stringify(data) });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.message || "Unable to create shop");
+      const patch = await fetch(`/api/shop-settings/${encodeURIComponent(result.shop.id)}`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` }, body: JSON.stringify({ momoNumber:data.momoNumber, deliveryFee:data.deliveryFee, jforceId:data.jforceId }) });
+      if (!patch.ok) { const d=await patch.json().catch(()=>({})); throw new Error(d.message || "Shop was created but its settings could not be saved"); }
       show("Shop created. Opening your shop control center…", true);
       location.href = `/dashboard/shop/${encodeURIComponent(result.shop.id)}`;
     } catch (error) {
