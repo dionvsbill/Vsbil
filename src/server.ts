@@ -19,6 +19,7 @@ app.use("/api/shop-settings", shopSettingsRouter);
 app.get("/dashboard/shop/create", (_req, res) => res.sendFile("shop-create.html", { root: "public" }));
 app.get("/dashboard/shop/:id", (_req, res) => res.sendFile("shop-dashboard.html", { root: "public" }));
 app.get("/shop/:slug", (_req, res) => res.sendFile("shop-store.html", { root: "public" }));
+app.get("/admin/shops", (_req, res) => res.sendFile("shops.html", { root: "public/admin" }));
 
 const server = app.listen(PORT, () => console.log(`VSBIL API listening on port ${PORT}`));
 
