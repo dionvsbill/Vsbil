@@ -4,6 +4,7 @@ import businessCommerceRouter from "./routes/businessCommerce.js";
 import shopExpansionRouter from "./routes/shopExpansion.js";
 import shopJumiaRouter from "./routes/shopJumia.js";
 import shopSettingsRouter from "./routes/shopSettings.js";
+import shopPublicRouter from "./routes/shopPublic.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 const isProduction = process.env.NODE_ENV === "production";
@@ -18,6 +19,7 @@ if (isProduction) {
 businessCommerceRouter.use("/shop", shopExpansionRouter);
 businessCommerceRouter.use("/shop-jumia", shopJumiaRouter);
 businessCommerceRouter.use("/shop-settings", shopSettingsRouter);
+businessCommerceRouter.use("/shop-public", shopPublicRouter);
 
 app.get("/dashboard/shop/create", (_req, res) => res.sendFile("shop-create.html", { root: "public" }));
 app.get("/dashboard/shop/:id", (_req, res) => res.sendFile("shop-dashboard.html", { root: "public" }));
