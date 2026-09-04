@@ -122,11 +122,11 @@ alter table public.whatsapp_shop_flows enable row level security;
 -- Existing VSBIL Express API is the trusted access layer; no direct client
 -- financial writes are granted here.
 
-create or replace function public.shop_fee_percent(p_user_id uuid)
+create or replace function public.shop_fee_percent(p_shop_id uuid)
 returns numeric language sql stable security definer set search_path=public as $$
   select case when exists (
     select 1 from public.business_shops s
-    where s.user_id=p_user_id and s.is_pro=true and (s.pro_expires_at is null or s.pro_expires_at>now())
+    where s.id=p_shop_id and s.is_pro=true and (s.pro_expires_at is null or s.pro_expires_at>now())
   ) then 3 else 5 end
 $$;
 revoke all on function public.shop_fee_percent(uuid) from public,anon,authenticated;
@@ -135,7 +135,7 @@ grant execute on function public.shop_fee_percent(uuid) to service_role;
 create or replace function public.release_shop_order(p_order_id uuid,p_actor_id uuid)
 returns public.shop_orders
 language plpgsql security definer set search_path=public as $$
-declare o public.shop_orders; w public.wallets; settlement public.shop_settlements; hold public.shop_wallet_holds; net numeric; fee numeric;
+declare o public.shop_orders; w public.wallets; settlement public.shop_settlements; net numeric; fee numeric;
 begin
   select * into o from public.shop_orders where id=p_order_id for update;
   if not found then raise exception 'ORDER_NOT_FOUND'; end if;
