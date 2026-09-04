@@ -1,5 +1,6 @@
 import "dotenv/config";
 import app from "./app.js";
+import shopExpansionRouter from "./routes/shopExpansion.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 const isProduction = process.env.NODE_ENV === "production";
@@ -8,6 +9,11 @@ if (isProduction) {
   const missing = requiredProduction.filter(name => !process.env[name]?.trim());
   if (missing.length) throw new Error(`Missing production environment variables: ${missing.join(", ")}`);
 }
+
+// New shop APIs are additive. Existing Business Suite commerce routes remain unchanged.
+app.use("/api/shop", shopExpansionRouter);
+app.get("/dashboard/shop/create", (_req, res) => res.sendFile("shop-create.html", { root: "public" }));
+app.get("/dashboard/shop/:id", (_req, res) => res.sendFile("shop-dashboard.html", { root: "public" }));
 
 const server = app.listen(PORT, () => console.log(`VSBIL API listening on port ${PORT}`));
 
